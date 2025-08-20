@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AddressInput } from "../../features/contractSearch/components/AddressInput";
 import { ScoreCard } from "../../features/analysisResult/components/ScoreCard";
@@ -11,7 +11,7 @@ import { MatrixRain } from "../../shared/components/MatrixRain";
 import { DevelopmentBanner } from "../../shared/components/DevelopmentBanner";
 import { Eye, Brain, Database } from "lucide-react";
 
-export default function AnalyzePage() {
+function AnalyzeContent() {
   const searchParams = useSearchParams();
   const urlAddress = searchParams.get("address");
 
@@ -197,5 +197,19 @@ export default function AnalyzePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AnalyzePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      }
+    >
+      <AnalyzeContent />
+    </Suspense>
   );
 }

@@ -6,11 +6,7 @@ import {
   AlertTriangle,
   Database,
 } from "lucide-react";
-import {
-  formatTimestamp,
-  getRiskLevelColor,
-  getRiskLevelText,
-} from "../../../shared/lib/utils";
+import { formatTimestamp, getRiskLevelText } from "../../../shared/lib/utils";
 import { AnalysisResult } from "../../../shared/lib/zodSchemas";
 
 interface ScoreCardProps {

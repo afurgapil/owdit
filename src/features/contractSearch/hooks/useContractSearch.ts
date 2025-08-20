@@ -1,8 +1,5 @@
 import { useState, useCallback } from "react";
-import {
-  contractAddressSchema,
-  AnalysisResult,
-} from "../../../shared/lib/zodSchemas";
+import { AnalysisResult } from "../../../shared/lib/zodSchemas";
 import { isValidEthereumAddress } from "../../../shared/lib/utils";
 
 interface UseContractSearchReturn {
