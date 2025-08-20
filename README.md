@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Owdit - Smart Contract Security Score
 
-## Getting Started
+AI-powered smart contract security analysis platform built with the 0G Network.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **AI-Powered Analysis**: Automated security vulnerability detection
+- **0G Network Integration**: Permanent storage on decentralized infrastructure
+- **Real-time Scoring**: Instant security score generation
+- **Transparent Results**: Verifiable analysis stored on blockchain
+- **Cyberpunk UI**: Futuristic, dark-themed interface with Matrix Rain effects
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS with custom cyberpunk theme
+- **Validation**: Zod schemas
+- **Icons**: Lucide React
+- **Blockchain**: 0G Network integration (planned)
+
+## 🏗️ Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── page.tsx          # Landing page
+│   ├── analyze/          # Contract analysis
+│   ├── history/          # Analysis history
+│   └── api/              # API routes
+├── shared/                # Shared components & utilities
+│   ├── components/       # Reusable UI components (MatrixRain, Layout, etc.)
+│   └── lib/             # Utilities, constants & schemas
+└── features/             # Feature-based modules
+    ├── contractSearch/   # Contract search functionality
+    └── analysisResult/   # Analysis result display
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Clone the repository**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   git clone https://github.com/afurgapil/owdit.git
+   cd owdit
+   ```
 
-## Learn More
+2. **Install dependencies**
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Run development server**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+4. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔧 Development
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Build**: `npm run build`
+- **Start**: `npm start`
+- **Lint**: `npm run lint`
+
+## 🌟 Key Components
+
+- **Landing Page**: Problem/solution presentation with cyberpunk design
+- **Matrix Rain**: Dynamic background animation
+- **Analysis Interface**: Contract address input and AI analysis
+- **Results Display**: Security score visualization and findings
+- **History**: Previous analysis results and search functionality
+
+## 🎨 Design Features
+
+- **Cyberpunk Theme**: Dark background with neon accents
+- **Glassmorphism**: Translucent card effects
+- **Matrix Rain**: Animated background with flowing data
+- **Neon Effects**: Subtle glow and border effects
+- **Responsive**: Mobile-first design approach
+
+## 🔮 Future Roadmap
+
+- [ ] 0G Network integration
+- [ ] AI model training and deployment
+- [ ] Multi-chain support
+- [ ] Web Extension
+
+## 📄 License
+
+© 2025 Owdit. All rights reserved.
+
+## 🤝 Contributing
+
+This project is currently in development. Contributions and feedback are welcome!
+
+---
+
+**OWDIT** - The Watchful Owl watches over your smart contracts. 🔒🦉⚡
