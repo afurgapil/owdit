@@ -5,6 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import logo from "../../../public/logo-withoutbg.png";
 import Image from "next/image";
+import { NetworkSelector } from "./NetworkSelector";
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -44,6 +45,9 @@ export function Navbar() {
             >
               HISTORY
             </Link>
+
+            {/* Network Selector */}
+            <NetworkSelector />
           </div>
 
           {/* Mobile menu button */}
@@ -82,11 +86,18 @@ export function Navbar() {
               </Link>
               <Link
                 href="/history"
-                className="text-gray-300 hover:text-neon-green block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-green/10"
+                className="text-gray-300 hover:text-neon-green block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-purple/10"
                 onClick={() => setIsMenuOpen(false)}
               >
                 HISTORY
               </Link>
+
+              {/* Mobile Network Selector */}
+              <div className="pt-2 border-t border-neon-blue/20">
+                <div className="px-4 py-3">
+                  <NetworkSelector />
+                </div>
+              </div>
             </div>
           </div>
         )}
