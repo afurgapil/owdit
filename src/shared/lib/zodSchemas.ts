@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Ethereum address validation
+// Contract address validation with chain ID
 export const contractAddressSchema = z.object({
   address: z
     .string()
@@ -10,11 +10,13 @@ export const contractAddressSchema = z.object({
     )
     .min(42, "Address too short")
     .max(42, "Address too long"),
+  chainId: z.number().min(1, "Invalid chain ID"),
 });
 
 // Analysis result schema
 export const analysisResultSchema = z.object({
   address: z.string(),
+  chainId: z.number().min(1),
   score: z.number().min(0).max(100),
   level: z.enum(["low", "medium", "high"]),
   timestamp: z.string().datetime(),
@@ -26,6 +28,8 @@ export const analysisResultSchema = z.object({
     })
   ),
   status: z.enum(["pending", "completed", "failed"]),
+  contractName: z.string().optional(),
+  compilerVersion: z.string().optional(),
 });
 
 // API response schemas
@@ -37,6 +41,7 @@ export const scoreResponseSchema = z.object({
 
 export const analyzeRequestSchema = z.object({
   address: z.string(),
+  chainId: z.number().min(1, "Invalid chain ID"),
 });
 
 export type ContractAddress = z.infer<typeof contractAddressSchema>;

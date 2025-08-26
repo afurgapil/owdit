@@ -42,6 +42,7 @@ export const SECURITY_VULNERABILITIES = [
 export const MOCK_ANALYSIS_RESULTS = {
   pending: {
     address: "0x1234567890123456789012345678901234567890",
+    chainId: 1,
     score: 0,
     level: "low" as const,
     timestamp: new Date().toISOString(),
@@ -50,6 +51,7 @@ export const MOCK_ANALYSIS_RESULTS = {
   },
   completed: {
     address: "0x1234567890123456789012345678901234567890",
+    chainId: 1,
     score: 78,
     level: "medium" as const,
     timestamp: new Date().toISOString(),

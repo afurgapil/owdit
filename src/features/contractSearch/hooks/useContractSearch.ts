@@ -1,22 +1,24 @@
 import { useState, useCallback } from "react";
-import { AnalysisResult } from "../../../shared/lib/zodSchemas";
 import { isValidEthereumAddress } from "../../../shared/lib/utils";
+import { useNetwork } from "../../../shared/contexts/NetworkContext";
+import { ContractAnalysisResult } from "../../../shared/lib/fetchers/contractSource";
 
 interface UseContractSearchReturn {
   address: string;
   setAddress: (address: string) => void;
   isLoading: boolean;
   error: string | null;
-  result: AnalysisResult | null;
+  result: ContractAnalysisResult | null;
   searchContract: () => Promise<void>;
   clearError: () => void;
 }
 
 export function useContractSearch(): UseContractSearchReturn {
+  const { selectedChain } = useNetwork();
   const [address, setAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<ContractAnalysisResult | null>(null);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -39,40 +41,72 @@ export function useContractSearch(): UseContractSearchReturn {
       setIsLoading(true);
       setError(null);
 
-      // First, try to get existing score
-      const scoreResponse = await fetch(
-        `/api/score?address=${encodeURIComponent(address)}`
-      );
-      const scoreData = await scoreResponse.json();
-
-      if (scoreData.success && scoreData.data) {
-        setResult(scoreData.data);
-        return;
-      }
-
-      // If no existing score, start new analysis
-      const analyzeResponse = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ address }),
+      // Get contract source (with risk analysis fallback)
+      const url = `/api/contract-source?address=${encodeURIComponent(
+        address
+      )}&chainId=${selectedChain.id}`;
+      console.log("[ContractSource] Request", {
+        url,
+        address,
+        chainId: selectedChain.id,
       });
 
-      const analyzeData = await analyzeResponse.json();
+      const response = await fetch(url);
+      const data = await response.json();
 
-      if (analyzeData.success) {
-        setResult(analyzeData.data);
+      if (data.success && data.data) {
+        console.log("[ContractSource] Success", {
+          address: data.data.address,
+          chainId: data.data.chainId,
+          verified: data.data.verified,
+          type: data.data.verified ? "source" : "risk",
+          compilerVersion: data.data.compilerVersion,
+          filesCount:
+            data.data.verified && Array.isArray(data.data.files)
+              ? data.data.files.length
+              : 0,
+          bytecodeLength: !data.data.verified
+            ? data.data.bytecodeLength
+            : undefined,
+          selectorsCount: !data.data.verified
+            ? data.data.selectors?.length
+            : undefined,
+          riskSeverity: !data.data.verified
+            ? data.data.risk?.severity
+            : undefined,
+        });
+
+        // Log detailed data for unverified contracts
+        if (!data.data.verified) {
+          console.log("🔍 [ContractSource] Unverified contract details:", {
+            isContract: data.data.isContract,
+            bytecodeLength: data.data.bytecodeLength,
+            selectors: data.data.selectors,
+            opcodeCounters: data.data.opcodeCounters,
+            risk: data.data.risk,
+          });
+        }
+
+        setResult(data.data);
       } else {
-        setError(analyzeData.error || "An error occurred during analysis");
+        console.warn("[ContractSource] Failure", {
+          error: data.error,
+          address,
+          chainId: selectedChain.id,
+        });
+        setError(data.error || "Contract not found");
       }
     } catch (err) {
       setError("Network error occurred. Please try again.");
-      console.error("Contract search error:", err);
+      console.error("[ContractSource] Network error", {
+        err,
+        address,
+        chainId: selectedChain.id,
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [address]);
+  }, [address, selectedChain.id]);
 
   return {
     address,

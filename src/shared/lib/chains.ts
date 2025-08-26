@@ -22,6 +22,26 @@ export const SUPPORTED_CHAINS: Chain[] = [
     isActive: true, // Default active network
   },
   {
+    id: 11155111,
+    name: "Sepolia (Testnet)",
+    currency: "ETH",
+    explorer: "https://sepolia.etherscan.io",
+    sourcify: true,
+    etherscan: "https://api-sepolia.etherscan.io",
+    rpc: "https://rpc.sepolia.org",
+    isActive: true, // Enabled for testing
+  },
+  {
+    id: 17000,
+    name: "Holesky (Testnet)",
+    currency: "ETH",
+    explorer: "https://holesky.etherscan.io",
+    sourcify: true,
+    etherscan: "https://api-holesky.etherscan.io",
+    rpc: "https://ethereum-holesky.publicnode.com",
+    isActive: true, // Enabled for testing
+  },
+  {
     id: 137,
     name: "Polygon",
     currency: "MATIC",

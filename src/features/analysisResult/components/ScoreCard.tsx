@@ -72,6 +72,11 @@ export function ScoreCard({ result, className }: ScoreCardProps) {
             <p className="text-sm text-gray-400 font-mono">
               Contract: {result.address}
             </p>
+            {result.contractName && (
+              <p className="text-sm text-gray-400 font-mono">
+                Name: {result.contractName}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center space-x-3">

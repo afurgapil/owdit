@@ -3,13 +3,15 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AddressInput } from "../../features/contractSearch/components/AddressInput";
-import { ScoreCard } from "../../features/analysisResult/components/ScoreCard";
-import { ExplanationAccordion } from "../../features/analysisResult/components/ExplanationAccordion";
 import { useContractSearch } from "../../features/contractSearch/hooks/useContractSearch";
 import { MOCK_ANALYSIS_RESULTS } from "../../shared/lib/constants";
 import { MatrixRain } from "../../shared/components/MatrixRain";
 import { DevelopmentBanner } from "../../shared/components/DevelopmentBanner";
 import { Eye, Brain, Database } from "lucide-react";
+import {
+  ContractSource,
+  RiskAnalysisResult,
+} from "../../shared/lib/fetchers/contractSource";
 
 function AnalyzeContent() {
   const searchParams = useSearchParams();
@@ -117,17 +119,206 @@ function AnalyzeContent() {
         {/* Results */}
         {result && (
           <div className="space-y-12">
-            {/* Score Card */}
-            <div className="max-w-3xl mx-auto">
-              <ScoreCard result={result} />
-            </div>
+            {/* Contract Info Card */}
+            <div className="max-w-4xl mx-auto">
+              <div className="glass-card rounded-2xl border border-neon-blue/30 p-8">
+                <div className="flex items-center mb-6">
+                  <div className="p-3 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full glow-blue mr-4">
+                    <Eye className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white neon-text neon-blue">
+                      Contract Analysis
+                    </h3>
+                    <p className="text-sm text-gray-400 font-mono">
+                      {result.address}
+                    </p>
+                  </div>
+                </div>
 
-            {/* Findings */}
-            {result.status === "completed" && result.findings.length > 0 && (
-              <div className="max-w-4xl mx-auto">
-                <ExplanationAccordion items={result.findings} />
+                {/* Contract Source Info */}
+                {result.verified === true && (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4 text-sm">
+                      <span className="text-neon-green">✅ Verified</span>
+                      {(result as ContractSource).contractName && (
+                        <span className="text-gray-300">
+                          Name: {(result as ContractSource).contractName}
+                        </span>
+                      )}
+                      {(result as ContractSource).compilerVersion && (
+                        <span className="text-gray-300">
+                          Compiler: {(result as ContractSource).compilerVersion}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Files */}
+                    {(result as ContractSource).files &&
+                      (result as ContractSource).files.length > 0 && (
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-3">
+                            Source Files (
+                            {(result as ContractSource).files.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {(result as ContractSource).files
+                              .slice(0, 5)
+                              .map((file, index) => (
+                                <div
+                                  key={index}
+                                  className="bg-black/30 rounded-lg p-3"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-neon-blue font-mono text-sm">
+                                      {file.path}
+                                    </span>
+                                    <span className="text-gray-400 text-xs">
+                                      {file.content.length} chars
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            {(result as ContractSource).files.length > 5 && (
+                              <p className="text-gray-400 text-sm text-center">
+                                ... and{" "}
+                                {(result as ContractSource).files.length - 5}{" "}
+                                more files
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                )}
+
+                {/* Risk Analysis Info */}
+                {result.verified === false && (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4 text-sm">
+                      <span className="text-neon-orange">⚠️ Unverified</span>
+                      <span className="text-gray-300">
+                        Bytecode:{" "}
+                        {(result as RiskAnalysisResult).bytecodeLength ||
+                          "Unknown"}{" "}
+                        bytes
+                      </span>
+                    </div>
+
+                    {/* Selectors */}
+                    {(result as RiskAnalysisResult).selectors &&
+                      (result as RiskAnalysisResult).selectors.length > 0 && (
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-3">
+                            Function Selectors (
+                            {(result as RiskAnalysisResult).selectors.length})
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {(result as RiskAnalysisResult).selectors
+                              .slice(0, 12)
+                              .map((selector: string, index: number) => (
+                                <div
+                                  key={index}
+                                  className="bg-black/30 rounded-lg p-2 text-center"
+                                >
+                                  <span className="text-neon-purple font-mono text-xs">
+                                    {selector}
+                                  </span>
+                                </div>
+                              ))}
+                            {(result as RiskAnalysisResult).selectors.length >
+                              12 && (
+                              <p className="text-gray-400 text-sm text-center col-span-full">
+                                ... and{" "}
+                                {(result as RiskAnalysisResult).selectors
+                                  .length - 12}{" "}
+                                more selectors
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Opcodes */}
+                    {(result as RiskAnalysisResult).opcodeCounters && (
+                      <div>
+                        <h4 className="text-lg font-semibold text-white mb-3">
+                          Opcode Analysis
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {Object.entries(
+                            (result as RiskAnalysisResult).opcodeCounters
+                          ).map(([opcode, count]) => (
+                            <div
+                              key={opcode}
+                              className="bg-black/30 rounded-lg p-2 text-center"
+                            >
+                              <span className="text-neon-green text-sm font-medium">
+                                {opcode}
+                              </span>
+                              <div className="text-white font-bold">
+                                {count}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Risk Assessment */}
+                    {(result as RiskAnalysisResult).risk && (
+                      <div>
+                        <h4 className="text-lg font-semibold text-white mb-3">
+                          Risk Assessment
+                        </h4>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-bold ${
+                              (result as RiskAnalysisResult).risk.severity ===
+                              "high"
+                                ? "bg-red-500/20 text-red-400 border border-red-500/40"
+                                : (result as RiskAnalysisResult).risk
+                                    .severity === "medium"
+                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                                : (result as RiskAnalysisResult).risk
+                                    .severity === "low"
+                                ? "bg-green-500/20 text-green-400 border border-green-500/40"
+                                : "bg-gray-500/20 text-gray-400 border border-gray-500/40"
+                            }`}
+                          >
+                            {(
+                              result as RiskAnalysisResult
+                            ).risk.severity.toUpperCase()}{" "}
+                            RISK
+                          </span>
+                        </div>
+                        {(result as RiskAnalysisResult).risk.risks.length >
+                          0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-md font-semibold text-white">
+                              Detected Risks:
+                            </h5>
+                            <ul className="space-y-1">
+                              {(result as RiskAnalysisResult).risk.risks.map(
+                                (risk: string, index: number) => (
+                                  <li
+                                    key={index}
+                                    className="text-gray-300 text-sm flex items-center"
+                                  >
+                                    <span className="w-2 h-2 bg-red-400 rounded-full mr-2"></span>
+                                    {risk}
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* 0G Network Info */}
             <div className="max-w-4xl mx-auto glass-card border border-neon-blue/30 rounded-xl p-8">

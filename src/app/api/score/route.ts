@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get("address");
+    const chainId = parseInt(searchParams.get("chainId") || "1");
 
     if (!address) {
       return NextResponse.json(
@@ -19,7 +20,10 @@ export async function GET(request: NextRequest) {
 
     // TODO: In the future, this will query 0G Storage/DA
     // For now, return mock data
-    const mockResult = MOCK_ANALYSIS_RESULTS.completed;
+    const mockResult = {
+      ...MOCK_ANALYSIS_RESULTS.completed,
+      chainId: chainId,
+    };
 
     // Simulate checking if address exists in storage
     if (address === mockResult.address) {
