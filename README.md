@@ -65,6 +65,25 @@ src/
 - **Start**: `npm start`
 - **Lint**: `npm run lint`
 
+## 🔐 Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```bash
+# 0G Network Configuration
+PRIVATE_KEY=your_ethereum_private_key_here
+RPC_0G=https://evmrpc-testnet.0g.ai
+
+# Optional: Base URL for API calls (defaults to localhost:3000)
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
+
+**Important Notes:**
+
+- `PRIVATE_KEY`: Your Ethereum private key for 0G Network transactions
+- `RPC_0G`: 0G Galileo testnet RPC endpoint (Chain ID: 16601)
+- Ensure your wallet has sufficient funds on 0G testnet for ledger operations
+
 ## 🌟 Key Components
 
 - **Landing Page**: Problem/solution presentation with cyberpunk design

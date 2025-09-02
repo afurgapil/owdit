@@ -48,19 +48,50 @@ function extractSelectors(bytecode: string): string[] {
   const sels: Set<string> = new Set();
   let push4Count = 0;
 
-  for (let i = 0; i < hex.length - 10; i += 2) {
-    const op = hex.slice(i, i + 2);
-    if (op === "63") {
+  const step = (s: number) => parseInt(hex.slice(s, s + 2), 16);
+  const skipPush = (s: number) => {
+    const op = step(s);
+    if (op >= 0x60 && op <= 0x7f) {
+      const n = op - 0x5f;
+      return s + 2 + n * 2;
+    }
+    return s + 2;
+  };
+
+  let i = 0;
+  while (i < hex.length - 10) {
+    const op = step(i);
+    if (op === 0x63) {
       // PUSH4
-      const sig = "0x" + hex.slice(i + 2, i + 10);
-      sels.add(sig);
-      push4Count++;
-      i += 8;
+      const sel = "0x" + hex.slice(i + 2, i + 10);
+
+      // Sonraki birkaç opcode içinde DUPx + EQ + JUMPI var mı?
+      let j = i + 10;
+      let hasDup = false,
+        hasEq = false,
+        hasJumpi = false;
+
+      for (let k = 0; k < 6 && j < hex.length - 2; k++) {
+        const o = step(j);
+        if (o >= 0x80 && o <= 0x8f) hasDup = true; // DUP1..DUP16
+        if (o === 0x14) hasEq = true; // EQ
+        if (o === 0x57) hasJumpi = true; // JUMPI
+        j = skipPush(j);
+      }
+
+      if (hasDup && hasEq && hasJumpi) {
+        sels.add(sel);
+        push4Count++;
+      }
+
+      i = i + 10;
+    } else {
+      i = skipPush(i);
     }
   }
 
   console.log(
-    `✅ [Selector] Found ${sels.size} unique selectors from ${push4Count} PUSH4 opcodes`
+    `✅ [Selector] Found ${sels.size} unique selectors from ${push4Count} PUSH4 opcodes (dispatcher pattern)`
   );
   return [...sels];
 }
@@ -94,23 +125,41 @@ async function lookupSignatures(hexSelector: string): Promise<string[]> {
 
 function opcodeScan(bytecode: string) {
   console.log(`🔍 [Opcode] Scanning bytecode for risk patterns`);
-  const b = (
+  const hex = (
     bytecode.startsWith("0x") ? bytecode.slice(2) : bytecode
   ).toLowerCase();
-  const count = (needle: string) =>
-    (b.match(new RegExp(needle, "g")) || []).length;
-
-  const result = {
-    CALL: count("f1"),
-    CALLCODE: count("f2"),
-    DELEGATECALL: count("f4"),
-    STATICCALL: count("fa"),
-    SELFDESTRUCT: count("ff"),
-    CREATE2: count("f5"),
+  let i = 0;
+  const out = {
+    CALL: 0,
+    CALLCODE: 0,
+    DELEGATECALL: 0,
+    STATICCALL: 0,
+    SELFDESTRUCT: 0,
+    CREATE2: 0,
   };
 
-  console.log(`✅ [Opcode] Scan results:`, result);
-  return result;
+  while (i < hex.length) {
+    const op = parseInt(hex.slice(i, i + 2), 16);
+
+    // Risk opcode sayımları
+    if (op === 0xf1) out.CALL++;
+    else if (op === 0xf2) out.CALLCODE++;
+    else if (op === 0xf4) out.DELEGATECALL++;
+    else if (op === 0xfa) out.STATICCALL++;
+    else if (op === 0xf5) out.CREATE2++;
+    else if (op === 0xff) out.SELFDESTRUCT++;
+
+    // PUSH1..PUSH32 ise veriyi atla
+    if (op >= 0x60 && op <= 0x7f) {
+      const n = op - 0x5f; // 1..32
+      i += 2 + n * 2; // opcode + n byte data
+    } else {
+      i += 2; // tek baytlık opcode
+    }
+  }
+
+  console.log(`✅ [Opcode] Scan results:`, out);
+  return out;
 }
 
 function looksLikeEIP1167(bytecode: string) {
@@ -268,6 +317,49 @@ export async function GET(req: NextRequest) {
     console.log(`🔍 [Risk API] Step 5: Classifying risks`);
     const risk = classify(matchedSignatures, op);
 
+    // 6) AI inference on 0G (optional, can fail gracefully)
+    let aiOutput = null;
+    try {
+      console.log(`🤖 [Risk API] Step 6: Calling 0G AI inference`);
+      const aiResponse = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+        }/api/infer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            features: {
+              summary: `Contract ${addr} on chain ${chainId}`,
+              selectors: selectors.slice(0, 20), // Limit for AI context
+              opcodeCounters: op,
+              proxy: {
+                eip1967Implementation: implAddr,
+                looksLikeEIP1167: looksLikeEIP1167(code),
+              },
+              bytecodeLength: code.length / 2,
+              chainId,
+              address: addr,
+            },
+            heuristic: risk, // Include heuristic severity and risks
+          }),
+        }
+      );
+
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        if (aiData.success && aiData.data) {
+          aiOutput = aiData.data;
+          console.log(`✅ [Risk API] AI inference successful:`, aiOutput);
+        }
+      }
+    } catch (aiError) {
+      console.warn(
+        `⚠️ [Risk API] AI inference failed (continuing without it):`,
+        aiError
+      );
+    }
+
     console.log(`✅ [Risk API] Analysis complete, returning result`);
     const result = {
       success: true,
@@ -284,6 +376,7 @@ export async function GET(req: NextRequest) {
           looksLikeEIP1167: looksLikeEIP1167(code),
         },
         risk,
+        aiOutput, // Include AI analysis if available
       },
     };
 

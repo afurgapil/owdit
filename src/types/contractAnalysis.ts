@@ -32,6 +32,12 @@ export interface UnifiedContractAnalysis {
     risk: { severity: string; risks: string[] };
   };
 
+  // AI analysis (optional, from 0G inference)
+  aiOutput?: {
+    score: number;
+    reason: string;
+  };
+
   // Metadata
   analysisType: "verified" | "unverified";
   timestamp: string;
@@ -82,6 +88,7 @@ export function transformRiskAnalysisToUnified(
       opcodeCounters: data.opcodeCounters,
       risk: data.risk,
     },
+    aiOutput: data.aiOutput, // Include AI output if available
     analysisType: "unverified",
     timestamp: new Date().toISOString(),
   };

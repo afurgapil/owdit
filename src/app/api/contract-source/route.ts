@@ -45,6 +45,12 @@ const contractSourceResponseSchema = z.object({
           }),
         })
         .optional(),
+      aiOutput: z
+        .object({
+          score: z.number(),
+          reason: z.string(),
+        })
+        .optional(),
       analysisType: z.enum(["verified", "unverified"]),
       timestamp: z.string(),
     })

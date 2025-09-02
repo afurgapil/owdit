@@ -1,4 +1,4 @@
-import { Chain } from "../chains";
+import { getChainById } from "../chains";
 
 // Risk analysis result interface
 export interface RiskAnalysisResult {
@@ -13,6 +13,10 @@ export interface RiskAnalysisResult {
     severity: "low" | "medium" | "high" | "unknown";
     risks: string[];
   };
+  aiOutput?: {
+    score: number;
+    reason: string;
+  };
 }
 
 // Unified contract source interface
@@ -26,7 +30,21 @@ export interface ContractSource {
     path: string;
     content: string;
   }>;
-  abi?: any;
+  abi?: Array<{
+    type: string;
+    name?: string;
+    inputs?: Array<{
+      name: string;
+      type: string;
+      indexed?: boolean;
+    }>;
+    outputs?: Array<{
+      name: string;
+      type: string;
+    }>;
+    stateMutability?: string;
+    anonymous?: boolean;
+  }>;
   sourceCode?: string; // For single-file contracts
 }
 
@@ -46,7 +64,21 @@ interface SourcifyResponse {
     };
     language: string;
     output: {
-      abi: any[];
+      abi: Array<{
+        type: string;
+        name?: string;
+        inputs?: Array<{
+          name: string;
+          type: string;
+          indexed?: boolean;
+        }>;
+        outputs?: Array<{
+          name: string;
+          type: string;
+        }>;
+        stateMutability?: string;
+        anonymous?: boolean;
+      }>;
     };
   };
 }
@@ -181,20 +213,20 @@ export async function fetchFromEtherscan(
     }
 
     const result = data.result[0];
-    let sourceCode = result.SourceCode;
+    const sourceCode = result.SourceCode;
     let files: Array<{ path: string; content: string }> = [];
 
     // Handle multi-file contracts (JSON format)
     if (sourceCode.startsWith("{") && sourceCode.includes('"sources"')) {
       try {
-        const parsed = JSON.parse(sourceCode);
+        const parsed = JSON.parse(sourceCode) as {
+          sources: Record<string, { content: string }>;
+        };
         if (parsed.sources) {
-          files = Object.entries(parsed.sources).map(
-            ([path, source]: [string, any]) => ({
-              path,
-              content: source.content,
-            })
-          );
+          files = Object.entries(parsed.sources).map(([path, source]) => ({
+            path,
+            content: source.content,
+          }));
         }
       } catch (e) {
         console.warn("Failed to parse multi-file source:", e);
@@ -259,11 +291,4 @@ export async function resolveContractSource(
 
   console.log("❌ Contract source not found");
   return null;
-}
-
-// Helper function to get chain by ID
-function getChainById(id: number): Chain | undefined {
-  // Import here to avoid circular dependency
-  const { getChainById: getChain } = require("../chains");
-  return getChain(id);
 }
