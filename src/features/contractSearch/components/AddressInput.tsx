@@ -8,6 +8,7 @@ interface AddressInputProps {
   isLoading?: boolean;
   error?: string;
   placeholder?: string;
+  onClearError?: () => void;
 }
 
 export function AddressInput({
@@ -17,6 +18,7 @@ export function AddressInput({
   isLoading = false,
   error,
   placeholder = "0x...",
+  onClearError,
 }: AddressInputProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,9 +67,19 @@ export function AddressInput({
       </form>
 
       {error && (
-        <div className="mt-4 flex items-center space-x-3 text-red-400 text-sm glass-card border border-red-500/30 rounded-lg p-3">
-          <AlertCircle className="h-5 w-5 text-red-400" />
-          <span className="font-medium">{error}</span>
+        <div className="mt-4 flex items-center justify-between text-red-400 text-sm glass-card border border-red-500/30 rounded-lg p-3">
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+            <span className="font-medium">{error}</span>
+          </div>
+          {onClearError && (
+            <button
+              onClick={onClearError}
+              className="text-red-300 hover:text-red-200 text-xs font-medium transition-colors"
+            >
+              Clear
+            </button>
+          )}
         </div>
       )}
 

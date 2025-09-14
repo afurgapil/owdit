@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveContractSource } from "../../../shared/lib/fetchers/contractSource";
+import {
+  resolveContractSource,
+  RiskAnalysisResult,
+  ContractSource,
+} from "../../../shared/lib/fetchers/contractSource";
 import { z } from "zod";
 import { transformToUnifiedFormat } from "../../../types/contractAnalysis";
 
@@ -131,7 +135,19 @@ export async function GET(request: NextRequest) {
             console.log(
               `✅ [ContractSource] Risk data received, transforming to unified format`
             );
-            const unifiedData = transformToUnifiedFormat(riskData.data);
+            // Transform risk data to match RiskAnalysisResult interface
+            const riskAnalysisResult: RiskAnalysisResult = {
+              verified: false,
+              chainId: riskData.data.chainId,
+              address: riskData.data.address,
+              isContract: riskData.data.isContract,
+              bytecodeLength: riskData.data.bytecodeLength,
+              selectors: riskData.data.selectors,
+              opcodeCounters: riskData.data.opcodeCounters,
+              risk: riskData.data.risk,
+              aiOutput: riskData.data.aiOutput,
+            };
+            const unifiedData = transformToUnifiedFormat(riskAnalysisResult);
             console.log(`✅ [ContractSource] Unified risk data:`, unifiedData);
 
             return NextResponse.json(
@@ -164,6 +180,71 @@ export async function GET(request: NextRequest) {
     );
     const unifiedData = transformToUnifiedFormat(contractSource);
     console.log(`✅ [ContractSource] Unified data:`, unifiedData);
+
+    // Add AI analysis for verified contracts
+    let aiOutput = null;
+    try {
+      console.log(
+        `🤖 [ContractSource] Calling 0G AI inference for verified contract`
+      );
+      // Type guard to ensure we have verified contract data
+      if (contractSource.verified && "contractName" in contractSource) {
+        const verifiedContract = contractSource as ContractSource; // Type assertion for verified contract
+
+        const aiResponse = await fetch(
+          `${
+            process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+          }/api/infer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              features: {
+                summary: `Verified contract ${contractSource.address} on chain ${contractSource.chainId}`,
+                contractName: verifiedContract.contractName,
+                compilerVersion: verifiedContract.compilerVersion,
+                sourceCode: verifiedContract.sourceCode,
+                files:
+                  verifiedContract.files?.map(
+                    (f: { path: string }) => f.path
+                  ) || [],
+                chainId: contractSource.chainId,
+                address: contractSource.address,
+              },
+              heuristic: {
+                severity: "none", // Verified contracts are generally safer
+                risks: [],
+              },
+            }),
+          }
+        );
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          if (aiData.success && aiData.data) {
+            aiOutput = aiData.data;
+            console.log(
+              `✅ [ContractSource] AI inference successful for verified contract:`,
+              aiOutput
+            );
+          }
+        }
+      } else {
+        console.log(
+          "⚠️ [ContractSource] Contract is not verified, skipping AI inference"
+        );
+      }
+    } catch (aiError) {
+      console.warn(
+        `⚠️ [ContractSource] AI inference failed for verified contract (continuing without it):`,
+        aiError
+      );
+    }
+
+    // Add AI output to unified data
+    if (aiOutput) {
+      unifiedData.aiOutput = aiOutput;
+    }
 
     return NextResponse.json(
       contractSourceResponseSchema.parse({

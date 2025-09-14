@@ -10,7 +10,7 @@ export interface RiskAnalysisResult {
   selectors: string[];
   opcodeCounters: Record<string, number>;
   risk: {
-    severity: "low" | "medium" | "high" | "unknown";
+    severity: "none" | "low" | "medium" | "high" | "unknown";
     risks: string[];
   };
   aiOutput?: {

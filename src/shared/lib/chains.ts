@@ -12,16 +12,6 @@ export interface Chain {
 
 export const SUPPORTED_CHAINS: Chain[] = [
   {
-    id: 1,
-    name: "Ethereum",
-    currency: "ETH",
-    explorer: "https://etherscan.io",
-    sourcify: true,
-    etherscan: "https://api.etherscan.io",
-    rpc: "https://eth.llamarpc.com",
-    isActive: true, // Default active network
-  },
-  {
     id: 11155111,
     name: "Sepolia (Testnet)",
     currency: "ETH",
@@ -31,6 +21,17 @@ export const SUPPORTED_CHAINS: Chain[] = [
     rpc: "https://rpc.sepolia.org",
     isActive: true, // Enabled for testing
   },
+  {
+    id: 1,
+    name: "Ethereum",
+    currency: "ETH",
+    explorer: "https://etherscan.io",
+    sourcify: true,
+    etherscan: "https://api.etherscan.io",
+    rpc: "https://eth.llamarpc.com",
+    isActive: true, // Default active network
+  },
+
   {
     id: 17000,
     name: "Holesky (Testnet)",

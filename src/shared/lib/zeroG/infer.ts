@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Wallet } from "ethers";
+import { ethers } from "ethers";
 import { createZGComputeNetworkBroker } from "@0glabs/0g-serving-broker";
 
 export interface RiskFeatures {
@@ -16,7 +16,13 @@ export interface RiskInferenceOutput {
   reason: string;
 }
 
-const DEFAULT_0G_RPC = process.env.RPC_0G || "https://evmrpc-testnet.0g.ai"; // Galileo testnet (ChainID 16601)
+const DEFAULT_0G_RPC = process.env.RPC_0G || "https://evmrpc-testnet.0g.ai"; // 0G Testnet
+
+// Official 0G Services from documentation
+const OFFICIAL_PROVIDERS = {
+  "llama-3.3-70b-instruct": "0xf07240Efa67755B5311bc75784a061eDB47165Dd",
+  "deepseek-r1-70b": "0x3feE5a4dd5FDb8a32dDA97Bed899830605dBD9D3",
+} as const;
 
 // Module-level caching to avoid repeated on-chain operations
 const ackedProviders = new Set<string>();
@@ -83,9 +89,20 @@ async function ensureLedgerAndAck(
   // Only acknowledge each provider once per session
   if (!ackedProviders.has(providerAddr)) {
     console.log(`[0G] Acknowledging provider ${providerAddr}...`);
-    await broker.inference?.acknowledgeProviderSigner?.(providerAddr);
-    ackedProviders.add(providerAddr);
-    console.log(`[0G] Provider ${providerAddr} acknowledged`);
+    try {
+      // Try acknowledgment method
+      if (broker.inference?.acknowledgeProviderSigner) {
+        await broker.inference.acknowledgeProviderSigner(providerAddr);
+      } else {
+        console.log(`[0G] No acknowledgment method available, skipping`);
+        return;
+      }
+      ackedProviders.add(providerAddr);
+      console.log(`[0G] Provider ${providerAddr} acknowledged`);
+    } catch (error) {
+      console.log(`[0G] Provider acknowledgment failed:`, error);
+      // Continue without acknowledgment for now
+    }
   }
 }
 
@@ -96,21 +113,36 @@ export async function inferRiskOn0G(
   if (!priv) throw new Error("PRIVATE_KEY is required for 0G inference");
 
   // 1) Provider & signer
-  const provider = new JsonRpcProvider(DEFAULT_0G_RPC);
-  const signer = new Wallet(priv, provider);
+  const provider = new ethers.JsonRpcProvider(DEFAULT_0G_RPC);
+  const wallet = new ethers.Wallet(priv, provider);
 
   // 2) Broker
   const broker = (await createZGComputeNetworkBroker(
-    signer
+    wallet
   )) as unknown as ZGBrokerLike;
 
-  // 3) Pick a service (prefer verifiable TeeML if present)
+  // 3) Pick a service (prefer official providers with TeeML)
   const services: ZGService[] = (await broker.inference?.listService?.()) || [];
   if (!services.length) throw new Error("No 0G services available");
 
-  // Prefer TeeML for verifiable responses, fallback to others
-  const svc: ZGService =
-    services.find((s) => s.verifiability === "TeeML") ?? services[0];
+  // Try to find official providers first, prefer TeeML
+  const officialProviderAddresses = Object.values(OFFICIAL_PROVIDERS);
+  let svc: ZGService | undefined = services.find(
+    (s) =>
+      officialProviderAddresses.includes(
+        s.provider as (typeof officialProviderAddresses)[number]
+      ) && s.verifiability === "TeeML"
+  );
+
+  // Fallback to any TeeML service
+  if (!svc) {
+    svc = services.find((s) => s.verifiability === "TeeML");
+  }
+
+  // Final fallback to any service
+  if (!svc) {
+    svc = services[0];
+  }
 
   console.log(
     `[0G] Selected service: ${svc.provider} (${svc.verifiability || "unknown"})`
@@ -120,8 +152,8 @@ export async function inferRiskOn0G(
   let signerBalance: bigint = BigInt(0);
   if (svc.verifiability === "TeeML") {
     try {
-      signerBalance = await provider.getBalance(signer.address);
-      console.log(`[0G] Signer balance: ${signerBalance} wei`);
+      signerBalance = await provider.getBalance(wallet.address);
+      console.log(`[0G] Wallet balance: ${signerBalance} wei`);
     } catch (e) {
       console.log("[0G] Balance check error:", e);
     }

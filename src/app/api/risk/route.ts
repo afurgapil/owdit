@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getChainById } from "../../../shared/lib/chains";
+import { BytecodeAnalyzer } from "../../../shared/lib/bytecodeAnalyzer";
 
 // ---- Schemas ----
 const riskRequestSchema = z.object({
@@ -40,127 +41,11 @@ async function rpcCall(
   }
 }
 
-function extractSelectors(bytecode: string): string[] {
-  console.log(
-    `🔍 [Selector] Extracting selectors from bytecode (${bytecode.length} chars)`
-  );
-  const hex = bytecode.startsWith("0x") ? bytecode.slice(2) : bytecode;
-  const sels: Set<string> = new Set();
-  let push4Count = 0;
+// Removed - now using BytecodeAnalyzer directly
 
-  const step = (s: number) => parseInt(hex.slice(s, s + 2), 16);
-  const skipPush = (s: number) => {
-    const op = step(s);
-    if (op >= 0x60 && op <= 0x7f) {
-      const n = op - 0x5f;
-      return s + 2 + n * 2;
-    }
-    return s + 2;
-  };
+// Removed - now using BytecodeAnalyzer's built-in signature recognition
 
-  let i = 0;
-  while (i < hex.length - 10) {
-    const op = step(i);
-    if (op === 0x63) {
-      // PUSH4
-      const sel = "0x" + hex.slice(i + 2, i + 10);
-
-      // Sonraki birkaç opcode içinde DUPx + EQ + JUMPI var mı?
-      let j = i + 10;
-      let hasDup = false,
-        hasEq = false,
-        hasJumpi = false;
-
-      for (let k = 0; k < 6 && j < hex.length - 2; k++) {
-        const o = step(j);
-        if (o >= 0x80 && o <= 0x8f) hasDup = true; // DUP1..DUP16
-        if (o === 0x14) hasEq = true; // EQ
-        if (o === 0x57) hasJumpi = true; // JUMPI
-        j = skipPush(j);
-      }
-
-      if (hasDup && hasEq && hasJumpi) {
-        sels.add(sel);
-        push4Count++;
-      }
-
-      i = i + 10;
-    } else {
-      i = skipPush(i);
-    }
-  }
-
-  console.log(
-    `✅ [Selector] Found ${sels.size} unique selectors from ${push4Count} PUSH4 opcodes (dispatcher pattern)`
-  );
-  return [...sels];
-}
-
-async function lookupSignatures(hexSelector: string): Promise<string[]> {
-  console.log(`🔍 [4byte] Looking up signature for selector: ${hexSelector}`);
-  const url = `https://www.4byte.directory/api/v1/signatures/?hex_signature=${hexSelector}`;
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 20000);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    const data = (await res.json()) as {
-      results?: Array<{ text_signature: string }>;
-    };
-    const names = (data?.results || []).map(
-      (r: { text_signature: string }) => r.text_signature
-    );
-    const uniqueNames = Array.from(new Set(names));
-    console.log(
-      `✅ [4byte] Found ${uniqueNames.length} signatures for ${hexSelector}:`,
-      uniqueNames.slice(0, 3)
-    );
-    return uniqueNames;
-  } catch (error) {
-    console.warn(`⚠️ [4byte] Failed to lookup ${hexSelector}:`, error);
-    return [];
-  } finally {
-    clearTimeout(id);
-  }
-}
-
-function opcodeScan(bytecode: string) {
-  console.log(`🔍 [Opcode] Scanning bytecode for risk patterns`);
-  const hex = (
-    bytecode.startsWith("0x") ? bytecode.slice(2) : bytecode
-  ).toLowerCase();
-  let i = 0;
-  const out = {
-    CALL: 0,
-    CALLCODE: 0,
-    DELEGATECALL: 0,
-    STATICCALL: 0,
-    SELFDESTRUCT: 0,
-    CREATE2: 0,
-  };
-
-  while (i < hex.length) {
-    const op = parseInt(hex.slice(i, i + 2), 16);
-
-    // Risk opcode sayımları
-    if (op === 0xf1) out.CALL++;
-    else if (op === 0xf2) out.CALLCODE++;
-    else if (op === 0xf4) out.DELEGATECALL++;
-    else if (op === 0xfa) out.STATICCALL++;
-    else if (op === 0xf5) out.CREATE2++;
-    else if (op === 0xff) out.SELFDESTRUCT++;
-
-    // PUSH1..PUSH32 ise veriyi atla
-    if (op >= 0x60 && op <= 0x7f) {
-      const n = op - 0x5f; // 1..32
-      i += 2 + n * 2; // opcode + n byte data
-    } else {
-      i += 2; // tek baytlık opcode
-    }
-  }
-
-  console.log(`✅ [Opcode] Scan results:`, out);
-  return out;
-}
+// Removed - now using BytecodeAnalyzer directly
 
 function looksLikeEIP1167(bytecode: string) {
   const b = (
@@ -177,54 +62,7 @@ function last20BytesToAddress(hex: string): string | null {
   return "0x" + hex.slice(-40);
 }
 
-function classify(signatures: string[], op: ReturnType<typeof opcodeScan>) {
-  console.log(
-    `🔍 [Classify] Analyzing ${signatures.length} signatures for risks`
-  );
-  const risks: string[] = [];
-  const has = (re: RegExp) => signatures.some((s) => re.test(s));
-  const add = (name: string) => risks.push(name);
-
-  // approvals / transfers
-  if (has(/^approve\(/i)) add("ERC20 approve");
-  if (has(/^increaseAllowance\(/i)) add("ERC20 increaseAllowance");
-  if (has(/^decreaseAllowance\(/i)) add("ERC20 decreaseAllowance");
-  if (has(/^permit\(/i)) add("ERC20 permit");
-  if (has(/^setApprovalForAll\(/i)) add("ERC721/1155 setApprovalForAll");
-  if (has(/^transferFrom\(/i)) add("transferFrom");
-  if (has(/^safeTransferFrom\(/i)) add("safeTransferFrom / batch");
-
-  // admin / upgradeability
-  if (has(/^upgradeTo\(/i)) add("upgradeTo (upgradeable)");
-  if (has(/^upgradeToAndCall\(/i)) add("upgradeToAndCall (upgradeable)");
-  if (has(/^changeAdmin\(/i)) add("changeAdmin (proxy admin)");
-  if (has(/^transferOwnership\(/i)) add("transferOwnership");
-  if (has(/^initialize\(/i)) add("initialize (re-init risk)");
-
-  // multicall/execute patterns
-  if (has(/^multicall\(/i)) add("multicall");
-  if (has(/^execute\(/i) || has(/^execTransaction\(/i))
-    add("execute/execTransaction");
-
-  // opcode flags
-  if (op.DELEGATECALL > 0) add(`DELEGATECALL x${op.DELEGATECALL}`);
-  if (op.CALLCODE > 0) add(`CALLCODE x${op.CALLCODE}`);
-  if (op.SELFDESTRUCT > 0) add(`SELFDESTRUCT x${op.SELFDESTRUCT}`);
-  if (op.CREATE2 > 0) add(`CREATE2 x${op.CREATE2}`);
-
-  const severity = /DELEGATECALL|upgradeTo|changeAdmin|execute/.test(
-    risks.join(" ")
-  )
-    ? "high"
-    : risks.length >= 2
-    ? "medium"
-    : risks.length === 1
-    ? "low"
-    : "none";
-
-  console.log(`✅ [Classify] Risk analysis complete:`, { severity, risks });
-  return { severity, risks };
-}
+// Removed - now using BytecodeAnalyzer directly
 
 export async function GET(req: NextRequest) {
   try {
@@ -285,37 +123,46 @@ export async function GET(req: NextRequest) {
     }
     console.log(`✅ [Risk API] Bytecode fetched: ${code.length / 2} bytes`);
 
-    // 2) selectors + 4byte lookup (limit to 40 selectors to keep fast)
-    console.log(`🔍 [Risk API] Step 2: Extracting function selectors`);
-    const selectors = extractSelectors(code).slice(0, 40);
+    // 2) Comprehensive bytecode analysis using new analyzer
     console.log(
-      `🔍 [Risk API] Step 2b: Looking up signatures for ${selectors.length} selectors`
+      `🔍 [Risk API] Step 2: Running comprehensive bytecode analysis`
     );
-    const signaturesSets = await Promise.all(selectors.map(lookupSignatures));
-    const matchedSignatures = [...new Set(signaturesSets.flat())].slice(0, 100);
-    console.log(
-      `✅ [Risk API] Found ${matchedSignatures.length} unique signatures`
-    );
+    const analysis = BytecodeAnalyzer.analyzeBytecode(addr, code);
+    console.log(`✅ [Risk API] Bytecode analysis complete:`, {
+      contractType: analysis.contractType,
+      complexity: analysis.estimatedComplexity,
+      functionCount: analysis.functionSelectors.length,
+      riskSeverity: analysis.riskAssessment.severity,
+    });
 
-    // 3) opcode scan
-    console.log(`🔍 [Risk API] Step 3: Scanning opcodes for risk patterns`);
-    const op = opcodeScan(code);
-
-    // 4) proxy detection
-    console.log(`🔍 [Risk API] Step 4: Checking for proxy patterns`);
+    // 3) Additional proxy detection for upgradeable contracts
+    console.log(`🔍 [Risk API] Step 3: Checking for proxy patterns`);
     const implSlot = await rpcCall(rpcUrl, "eth_getStorageAt", [
       addr,
       EIP1967_IMPL_SLOT,
       "latest",
     ]);
     const implAddr = last20BytesToAddress(implSlot);
+    const isUpgradeable = BytecodeAnalyzer.isUpgradeableContract(
+      code,
+      analysis.functionSelectors
+    );
+
     console.log(`✅ [Risk API] Proxy detection:`, {
       eip1967: implAddr,
       eip1167: looksLikeEIP1167(code),
+      isUpgradeable: isUpgradeable,
     });
 
-    console.log(`🔍 [Risk API] Step 5: Classifying risks`);
-    const risk = classify(matchedSignatures, op);
+    // 4) Use analyzer's risk assessment
+    console.log(`🔍 [Risk API] Step 4: Using analyzer risk assessment`);
+    const risk = {
+      severity:
+        analysis.riskAssessment.severity === "critical"
+          ? "high"
+          : analysis.riskAssessment.severity,
+      risks: analysis.riskAssessment.risks,
+    };
 
     // 6) AI inference on 0G (optional, can fail gracefully)
     let aiOutput = null;
@@ -330,14 +177,19 @@ export async function GET(req: NextRequest) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             features: {
-              summary: `Contract ${addr} on chain ${chainId}`,
-              selectors: selectors.slice(0, 20), // Limit for AI context
-              opcodeCounters: op,
+              summary: `Contract ${addr} on chain ${chainId} - ${analysis.contractType}`,
+              selectors: analysis.functionSelectors
+                .slice(0, 20)
+                .map((s) => s.selector),
+              opcodeCounters: analysis.opcodeCounters,
               proxy: {
                 eip1967Implementation: implAddr,
                 looksLikeEIP1167: looksLikeEIP1167(code),
+                isUpgradeable: isUpgradeable,
               },
               bytecodeLength: code.length / 2,
+              contractType: analysis.contractType,
+              complexity: analysis.estimatedComplexity,
               chainId,
               address: addr,
             },
@@ -364,17 +216,13 @@ export async function GET(req: NextRequest) {
     const result = {
       success: true,
       data: {
+        verified: false,
         address: addr,
         chainId,
         isContract: true,
         bytecodeLength: code.length / 2,
-        selectors,
-        matchedSignatures,
-        opcodeCounters: op,
-        proxy: {
-          eip1967Implementation: implAddr,
-          looksLikeEIP1167: looksLikeEIP1167(code),
-        },
+        selectors: analysis.functionSelectors.map((s) => s.selector),
+        opcodeCounters: analysis.opcodeCounters,
         risk,
         aiOutput, // Include AI analysis if available
       },
@@ -385,7 +233,6 @@ export async function GET(req: NextRequest) {
       chainId: result.data.chainId,
       bytecodeLength: result.data.bytecodeLength,
       selectorsCount: result.data.selectors.length,
-      signaturesCount: result.data.matchedSignatures.length,
       riskSeverity: result.data.risk.severity,
       riskCount: result.data.risk.risks.length,
     });

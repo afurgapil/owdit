@@ -4,16 +4,12 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AddressInput } from "../../features/contractSearch/components/AddressInput";
 import { useContractSearch } from "../../features/contractSearch/hooks/useContractSearch";
-import { MOCK_ANALYSIS_RESULTS } from "../../shared/lib/constants";
 import { MatrixRain } from "../../shared/components/MatrixRain";
-import { DevelopmentBanner } from "../../shared/components/DevelopmentBanner";
-import { Eye, Brain, Database } from "lucide-react";
-import {
-  ContractSource,
-  RiskAnalysisResult,
-} from "../../shared/lib/fetchers/contractSource";
+import { useNetwork } from "../../shared/contexts/NetworkContext";
+import { Brain, Database } from "lucide-react";
 
 function AnalyzeContent() {
+  const { selectedChain } = useNetwork();
   const searchParams = useSearchParams();
   const urlAddress = searchParams.get("address");
 
@@ -27,7 +23,9 @@ function AnalyzeContent() {
     clearError,
   } = useContractSearch();
 
-  const [showDemo, setShowDemo] = useState(false);
+  const [selectedDemoContract, setSelectedDemoContract] = useState<
+    string | null
+  >(null);
 
   // Set address from URL parameter if available
   useEffect(() => {
@@ -36,419 +34,502 @@ function AnalyzeContent() {
     }
   }, [urlAddress, address, setAddress]);
 
-  // Handle demo button click
-  const handleDemo = () => {
-    setAddress(MOCK_ANALYSIS_RESULTS.completed.address);
-    setShowDemo(true);
-  };
-
-  // Auto-search when demo is enabled
-  useEffect(() => {
-    if (showDemo && address === MOCK_ANALYSIS_RESULTS.completed.address) {
-      searchContract();
-      setShowDemo(false);
+  // Handle demo contract selection
+  const handleDemoContractSelect = (contractAddress: string) => {
+    if (selectedDemoContract === contractAddress) {
+      // If already selected, deselect it
+      setSelectedDemoContract(null);
+      setAddress("");
+    } else {
+      // Select new contract
+      setSelectedDemoContract(contractAddress);
+      setAddress(contractAddress);
+      // Clear any previous results when selecting a new demo contract
+      // The result will be cleared in useContractSearch when searchContract is called
     }
-  }, [showDemo, address, searchContract]);
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Matrix Rain Background */}
       <MatrixRain gridSize={24} minDurationSec={15} maxDurationSec={25} />
 
-      {/* Grid Pattern Overlay */}
-      <div className="grid-pattern absolute inset-0 pointer-events-none"></div>
-
-      {/* Development Banner */}
-      <div className="relative z-20">
-        <DevelopmentBanner />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-8 sm:py-12 lg:py-16">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-8">
-            <div className="p-6 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full glow-blue">
-              <Eye className="h-16 w-16 text-white" />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold text-white mb-6 neon-text neon-blue">
-            Contract Security Analysis
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            The <span className="text-owl-gold font-bold">OWL</span> watches
-            over your smart contracts. Enter an address and get an AI-powered
-            security score.
-          </p>
+        <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+          <div className="flex justify-center mb-8"></div>
         </div>
 
-        {/* Demo Button */}
-        <div className="text-center mb-12">
-          <button
-            onClick={handleDemo}
-            className="btn-cyberpunk px-8 py-4 text-lg rounded-xl hover-glow transform hover:scale-105 transition-all duration-300"
-          >
-            <span className="flex items-center">
-              <Brain className="mr-3 h-6 w-6" />
-              Try with Demo Contract
-            </span>
-          </button>
+        {/* Demo Contracts Section */}
+        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {/* Verified Contract Demo */}
+            <button
+              className={`p-4 sm:p-6 transition-all duration-300 cursor-pointer group text-center transform hover:scale-105 hover:shadow-lg w-full ${
+                selectedDemoContract ===
+                "0x56182792540295095ea6e269C6680E98FEAaC73E"
+                  ? "border-2 border-green-400 bg-green-900/20 shadow-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                  : "border-2 border-gray-600 hover:border-green-400 hover:bg-green-900/10 hover:shadow-green-500/20"
+              }`}
+              onClick={() =>
+                handleDemoContractSelect(
+                  "0x56182792540295095ea6e269C6680E98FEAaC73E"
+                )
+              }
+            >
+              <div className="flex items-center justify-center mb-3">
+                <div
+                  className={`w-3 h-3 rounded-full mr-2 ${
+                    selectedDemoContract ===
+                    "0x56182792540295095ea6e269C6680E98FEAaC73E"
+                      ? "bg-green-400"
+                      : "bg-green-400 animate-pulse"
+                  }`}
+                ></div>
+                <h3 className="font-bold text-green-400 text-lg">
+                  Verified Contract
+                </h3>
+              </div>
+              <p className="text-gray-300 mb-3 text-sm">
+                Counter Contract on Sepolia
+              </p>
+              <div className="text-xs text-gray-400 font-mono mb-3 bg-gray-800/50 p-2 rounded break-all leading-relaxed">
+                0x56182792540295095ea6e269C6680E98FEAaC73E
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="text-sm text-green-300 font-medium group-hover:text-green-200 transition-colors">
+                  {selectedDemoContract ===
+                  "0x56182792540295095ea6e269C6680E98FEAaC73E"
+                    ? "✓ Selected"
+                    : "Select for Analysis"}
+                </div>
+                <a
+                  href="https://sepolia.etherscan.io/address/0x56182792540295095ea6e269C6680E98FEAaC73E"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View on Etherscan →
+                </a>
+              </div>
+            </button>
+
+            {/* Unverified Contract Demo */}
+            <button
+              className={`p-4 sm:p-6 transition-all duration-300 cursor-pointer group text-center transform hover:scale-105 hover:shadow-lg w-full ${
+                selectedDemoContract ===
+                "0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
+                  ? "border-2 border-orange-400 bg-orange-900/20 shadow-orange-500/20 shadow-[0_0_20px_rgba(251,146,60,0.3)]"
+                  : "border-2 border-gray-600 hover:border-orange-400 hover:bg-orange-900/10 hover:shadow-orange-500/20"
+              }`}
+              onClick={() =>
+                handleDemoContractSelect(
+                  "0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
+                )
+              }
+            >
+              <div className="flex items-center justify-center mb-3">
+                <div
+                  className={`w-3 h-3 rounded-full mr-2 ${
+                    selectedDemoContract ===
+                    "0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
+                      ? "bg-orange-400"
+                      : "bg-orange-400 animate-pulse"
+                  }`}
+                ></div>
+                <h3 className="font-bold text-orange-400 text-lg">
+                  Unverified Contract
+                </h3>
+              </div>
+              <p className="text-gray-300 mb-3 text-sm">
+                Custom Contract on Sepolia
+              </p>
+              <div className="text-xs text-gray-400 font-mono mb-3 bg-gray-800/50 p-2 rounded break-all leading-relaxed">
+                0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="text-sm text-orange-300 font-medium group-hover:text-orange-200 transition-colors">
+                  {selectedDemoContract ===
+                  "0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
+                    ? "✓ Selected"
+                    : "Select for Analysis"}
+                </div>
+                <a
+                  href="https://sepolia.etherscan.io/address/0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View on Etherscan →
+                </a>
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-400">
+              {selectedDemoContract
+                ? "Click the button above to analyze the selected contract"
+                : "Select a demo contract above to get started"}
+            </p>
+          </div>
         </div>
 
         {/* Address Input */}
-        <div className="mb-16">
+        <div className="mb-8 sm:mb-12 lg:mb-16">
           <AddressInput
             value={address}
             onChange={setAddress}
             onSearch={searchContract}
             isLoading={isLoading}
             error={error || undefined}
-            placeholder="0x1234567890123456789012345678901234567890"
+            onClearError={clearError}
           />
-          {error && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={clearError}
-                className="text-neon-blue hover:text-neon-purple text-sm font-medium transition-colors"
-              >
-                Clear Error
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Results */}
         {result && (
-          <div className="space-y-12">
-            {/* Debug Info */}
-            <div className="max-w-4xl mx-auto p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
-              <p className="text-red-400 text-sm font-mono">
-                DEBUG: result.verified = {String(result.verified)},
-                result.verified === false = {String(result.verified === false)},
-                has aiOutput ={" "}
-                {String((result as RiskAnalysisResult).aiOutput ? "YES" : "NO")}
-                <br />
-                result type: {typeof result}, result keys:{" "}
-                {Object.keys(result).join(", ")},
-                <br />
-                result.aiOutput direct:{" "}
-                {String(
-                  (result as unknown as Record<string, unknown>).aiOutput
-                    ? "YES"
-                    : "NO"
-                )}
-                <br />
-                result.aiOutput value:{" "}
-                {JSON.stringify(
-                  (result as unknown as Record<string, unknown>).aiOutput
-                )}
-              </p>
+          <div className="space-y-8">
+            {/* Analysis Complete Message */}
+            <div className="text-center">
+              <div className="inline-flex items-center px-6 py-3 bg-neon-green/20 border border-neon-green rounded-full text-neon-green font-bold text-lg">
+                <Database className="h-6 w-6 mr-3" />
+                Contract Retrieved Successfully
+              </div>
             </div>
-            {/* Contract Info Card */}
-            <div className="max-w-4xl mx-auto">
-              <div className="glass-card rounded-2xl border border-neon-blue/30 p-8">
-                <div className="flex items-center mb-6">
-                  <div className="p-3 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full glow-blue mr-4">
-                    <Eye className="h-8 w-8 text-white" />
+
+            {/* Contract Information Display */}
+            <div className="glass-card p-4 sm:p-6 lg:p-8 rounded-3xl neon-border">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 text-center">
+                Contract Information
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                <div>
+                  <h3 className="text-xl font-bold text-neon-blue mb-4">
+                    Basic Information
+                  </h3>
+                  <div className="space-y-3 text-gray-300">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                      <span className="font-bold">Address:</span>
+                      <span className="font-mono text-xs sm:text-sm break-all">
+                        {result.address}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                      <span className="font-bold">Network:</span>
+                      <span>{selectedChain.name}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                      <span className="font-bold">Status:</span>
+                      <span
+                        className={
+                          result.verified
+                            ? "text-neon-green"
+                            : "text-neon-orange"
+                        }
+                      >
+                        {result.verified ? "Verified" : "Unverified"}
+                      </span>
+                    </div>
+                    {result.verified &&
+                      "contractName" in result &&
+                      result.contractName && (
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Name:</span>
+                          <span className="break-all">
+                            {result.contractName}
+                          </span>
+                        </div>
+                      )}
+                    {result.verified &&
+                      "compilerVersion" in result &&
+                      result.compilerVersion && (
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Compiler:</span>
+                          <span className="break-all">
+                            {result.compilerVersion}
+                          </span>
+                        </div>
+                      )}
                   </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white neon-text neon-blue">
-                      Contract Analysis
-                    </h3>
-                    <p className="text-sm text-gray-400 font-mono">
-                      {result.address}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-neon-purple mb-4">
+                    Contract Details
+                  </h3>
+                  <div className="space-y-3 text-gray-300">
+                    {result.verified ? (
+                      <>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Source Code:</span>
+                          <span className="text-neon-green">Available</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">ABI:</span>
+                          <span className="text-neon-green">Available</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Files:</span>
+                          <span>
+                            {result.verified && "sourceCode" in result
+                              ? (
+                                  result.sourceCode as {
+                                    files?: { path: string }[];
+                                  }
+                                )?.files?.length || 0
+                              : 0}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Bytecode:</span>
+                          <span className="text-neon-orange">Available</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Length:</span>
+                          <span>
+                            {!result.verified && "bytecodeLength" in result
+                              ? result.bytecodeLength || 0
+                              : 0}{" "}
+                            chars
+                          </span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Functions:</span>
+                          <span>
+                            {!result.verified && "bytecodeAnalysis" in result
+                              ? (
+                                  result.bytecodeAnalysis as {
+                                    selectors?: string[];
+                                  }
+                                )?.selectors?.length || 0
+                              : 0}{" "}
+                            detected
+                          </span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="font-bold">Risk Level:</span>
+                          <span
+                            className={`font-bold ${
+                              // Verified contract risk level from AI score
+                              result.verified &&
+                              (result as { aiOutput?: { score: number } })
+                                .aiOutput?.score !== undefined
+                                ? (result as { aiOutput: { score: number } })
+                                    .aiOutput.score < 40
+                                  ? "text-red-400"
+                                  : (result as { aiOutput: { score: number } })
+                                      .aiOutput.score < 60
+                                  ? "text-orange-400"
+                                  : (result as { aiOutput: { score: number } })
+                                      .aiOutput.score < 80
+                                  ? "text-yellow-400"
+                                  : "text-green-400"
+                                : result.verified
+                                ? "text-gray-400"
+                                : // Unverified contract risk level from bytecode analysis
+                                !result.verified &&
+                                  "bytecodeAnalysis" in result &&
+                                  (
+                                    result.bytecodeAnalysis as {
+                                      risk?: { severity: string };
+                                    }
+                                  )?.risk?.severity === "critical"
+                                ? "text-red-400"
+                                : !result.verified &&
+                                  "bytecodeAnalysis" in result &&
+                                  (
+                                    result.bytecodeAnalysis as {
+                                      risk?: { severity: string };
+                                    }
+                                  )?.risk?.severity === "high"
+                                ? "text-orange-400"
+                                : !result.verified &&
+                                  "bytecodeAnalysis" in result &&
+                                  (
+                                    result.bytecodeAnalysis as {
+                                      risk?: { severity: string };
+                                    }
+                                  )?.risk?.severity === "medium"
+                                ? "text-yellow-400"
+                                : "text-green-400"
+                            }`}
+                          >
+                            {result.verified &&
+                            (result as { aiOutput?: { score: number } })
+                              .aiOutput?.score !== undefined
+                              ? (result as { aiOutput: { score: number } })
+                                  .aiOutput.score < 40
+                                ? "CRITICAL"
+                                : (result as { aiOutput: { score: number } })
+                                    .aiOutput.score < 60
+                                ? "HIGH"
+                                : (result as { aiOutput: { score: number } })
+                                    .aiOutput.score < 80
+                                ? "MEDIUM"
+                                : "LOW"
+                              : result.verified
+                              ? "UNKNOWN"
+                              : !result.verified && "bytecodeAnalysis" in result
+                              ? (
+                                  result.bytecodeAnalysis as {
+                                    risk?: { severity: string };
+                                  }
+                                )?.risk?.severity?.toUpperCase() || "UNKNOWN"
+                              : "UNKNOWN"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Analysis Status */}
+              <div className="mt-6 sm:mt-8 p-4 bg-black/30 rounded-xl border border-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center mb-2 gap-2 sm:gap-0">
+                  <div className="flex items-center">
+                    <Brain className="h-5 w-5 mr-2 text-neon-purple" />
+                    <h4 className="text-lg font-bold text-white">
+                      AI Analysis Status
+                    </h4>
+                  </div>
+                  {isLoading && (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
+                      <span className="ml-2 text-sm text-neon-purple">
+                        Analyzing...
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="font-bold">Score:</span>
+                    <span
+                      className={`font-bold text-lg ${
+                        (("aiOutput" in result && result.aiOutput?.score) ||
+                          0) >= 80
+                          ? "text-green-400"
+                          : (("aiOutput" in result && result.aiOutput?.score) ||
+                              0) >= 60
+                          ? "text-yellow-400"
+                          : (("aiOutput" in result && result.aiOutput?.score) ||
+                              0) >= 40
+                          ? "text-orange-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {"aiOutput" in result ? result.aiOutput?.score || 0 : 0}
+                      /100
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="font-bold">Risk Level:</span>
+                    <span
+                      className={`font-bold ${
+                        // Verified contract risk level from AI score
+                        result.verified &&
+                        (result as unknown as { aiOutput?: { score: number } })
+                          .aiOutput?.score !== undefined
+                          ? (
+                              result as unknown as {
+                                aiOutput: { score: number };
+                              }
+                            ).aiOutput.score < 40
+                            ? "text-red-400"
+                            : (
+                                result as unknown as {
+                                  aiOutput: { score: number };
+                                }
+                              ).aiOutput.score < 60
+                            ? "text-orange-400"
+                            : (
+                                result as unknown as {
+                                  aiOutput: { score: number };
+                                }
+                              ).aiOutput.score < 80
+                            ? "text-yellow-400"
+                            : "text-green-400"
+                          : result.verified
+                          ? "text-gray-400"
+                          : // Unverified contract risk level from bytecode analysis
+                          !result.verified &&
+                            "bytecodeAnalysis" in result &&
+                            (
+                              result.bytecodeAnalysis as {
+                                risk?: { severity: string };
+                              }
+                            )?.risk?.severity === "critical"
+                          ? "text-red-400"
+                          : !result.verified &&
+                            "bytecodeAnalysis" in result &&
+                            (
+                              result.bytecodeAnalysis as {
+                                risk?: { severity: string };
+                              }
+                            )?.risk?.severity === "high"
+                          ? "text-orange-400"
+                          : !result.verified &&
+                            "bytecodeAnalysis" in result &&
+                            (
+                              result.bytecodeAnalysis as {
+                                risk?: { severity: string };
+                              }
+                            )?.risk?.severity === "medium"
+                          ? "text-yellow-400"
+                          : "text-green-400"
+                      }`}
+                    >
+                      {result.verified &&
+                      (result as unknown as { aiOutput?: { score: number } })
+                        .aiOutput?.score !== undefined
+                        ? (result as unknown as { aiOutput: { score: number } })
+                            .aiOutput.score < 40
+                          ? "CRITICAL"
+                          : (
+                              result as unknown as {
+                                aiOutput: { score: number };
+                              }
+                            ).aiOutput.score < 60
+                          ? "HIGH"
+                          : (
+                              result as unknown as {
+                                aiOutput: { score: number };
+                              }
+                            ).aiOutput.score < 80
+                          ? "MEDIUM"
+                          : "LOW"
+                        : result.verified
+                        ? "UNKNOWN"
+                        : !result.verified && "bytecodeAnalysis" in result
+                        ? (
+                            result.bytecodeAnalysis as {
+                              risk?: { severity: string };
+                            }
+                          )?.risk?.severity?.toUpperCase() || "UNKNOWN"
+                        : "UNKNOWN"}
+                    </span>
+                  </div>
+                  <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
+                    {"aiOutput" in result
+                      ? result.aiOutput?.reason || "Analysis pending..."
+                      : "Analysis pending..."}
+                  </p>
+
+                  <div className="mt-4 p-3 bg-gray-800 rounded-lg">
+                    <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                      <strong>Note:</strong> This analysis is powered by the 0G
+                      Compute Network. The AI examines the contract&apos;s
+                      source code, bytecode, and function selectors to provide
+                      comprehensive security insights and recommendations.
                     </p>
                   </div>
                 </div>
-
-                {/* Contract Source Info */}
-                {result.verified === true && (
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4 text-sm">
-                      <span className="text-neon-green">✅ Verified</span>
-                      {(result as ContractSource).contractName && (
-                        <span className="text-gray-300">
-                          Name: {(result as ContractSource).contractName}
-                        </span>
-                      )}
-                      {(result as ContractSource).compilerVersion && (
-                        <span className="text-gray-300">
-                          Compiler: {(result as ContractSource).compilerVersion}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Files */}
-                    {(result as ContractSource).files &&
-                      (result as ContractSource).files.length > 0 && (
-                        <div>
-                          <h4 className="text-lg font-semibold text-white mb-3">
-                            Source Files (
-                            {(result as ContractSource).files.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {(result as ContractSource).files
-                              .slice(0, 5)
-                              .map((file, index) => (
-                                <div
-                                  key={index}
-                                  className="bg-black/30 rounded-lg p-3"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-neon-blue font-mono text-sm">
-                                      {file.path}
-                                    </span>
-                                    <span className="text-gray-400 text-xs">
-                                      {file.content.length} chars
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            {(result as ContractSource).files.length > 5 && (
-                              <p className="text-gray-400 text-sm text-center">
-                                ... and{" "}
-                                {(result as ContractSource).files.length - 5}{" "}
-                                more files
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                  </div>
-                )}
-
-                {/* Risk Analysis Info */}
-                {result.verified === false && (
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4 text-sm">
-                      <span className="text-neon-orange">⚠️ Unverified</span>
-                      <span className="text-gray-300">
-                        Bytecode:{" "}
-                        {(result as RiskAnalysisResult).bytecodeLength ||
-                          "Unknown"}{" "}
-                        bytes
-                      </span>
-                    </div>
-
-                    {/* Selectors */}
-                    {(result as RiskAnalysisResult).selectors &&
-                      (result as RiskAnalysisResult).selectors.length > 0 && (
-                        <div>
-                          <h4 className="text-lg font-semibold text-white mb-3">
-                            Function Selectors (
-                            {(result as RiskAnalysisResult).selectors.length})
-                          </h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {(result as RiskAnalysisResult).selectors
-                              .slice(0, 12)
-                              .map((selector: string, index: number) => (
-                                <div
-                                  key={index}
-                                  className="bg-black/30 rounded-lg p-2 text-center"
-                                >
-                                  <span className="text-neon-purple font-mono text-xs">
-                                    {selector}
-                                  </span>
-                                </div>
-                              ))}
-                            {(result as RiskAnalysisResult).selectors.length >
-                              12 && (
-                              <p className="text-gray-400 text-sm text-center col-span-full">
-                                ... and{" "}
-                                {(result as RiskAnalysisResult).selectors
-                                  .length - 12}{" "}
-                                more selectors
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Opcodes */}
-                    {(result as RiskAnalysisResult).opcodeCounters && (
-                      <div>
-                        <h4 className="text-lg font-semibold text-white mb-3">
-                          Opcode Analysis
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {Object.entries(
-                            (result as RiskAnalysisResult).opcodeCounters
-                          ).map(([opcode, count]) => (
-                            <div
-                              key={opcode}
-                              className="bg-black/30 rounded-lg p-2 text-center"
-                            >
-                              <span className="text-neon-green text-sm font-medium">
-                                {opcode}
-                              </span>
-                              <div className="text-white font-bold">
-                                {count}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Risk Assessment */}
-                    {(result as RiskAnalysisResult).risk && (
-                      <div>
-                        <h4 className="text-lg font-semibold text-white mb-3">
-                          Risk Assessment
-                        </h4>
-                        <div className="flex items-center space-x-3 mb-3">
-                          <span
-                            className={`px-3 py-1 rounded-full text-sm font-bold ${
-                              (result as RiskAnalysisResult).risk.severity ===
-                              "high"
-                                ? "bg-red-500/20 text-red-400 border border-red-500/40"
-                                : (result as RiskAnalysisResult).risk
-                                    .severity === "medium"
-                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                                : (result as RiskAnalysisResult).risk
-                                    .severity === "low"
-                                ? "bg-green-500/20 text-green-400 border border-green-500/40"
-                                : "bg-gray-500/20 text-gray-400 border border-gray-500/40"
-                            }`}
-                          >
-                            {(
-                              result as RiskAnalysisResult
-                            ).risk.severity.toUpperCase()}{" "}
-                            RISK
-                          </span>
-                        </div>
-                        {(result as RiskAnalysisResult).risk.risks.length >
-                          0 && (
-                          <div className="space-y-2">
-                            <h5 className="text-md font-semibold text-white">
-                              Detected Risks:
-                            </h5>
-                            <ul className="space-y-1">
-                              {(result as RiskAnalysisResult).risk.risks.map(
-                                (risk: string, index: number) => (
-                                  <li
-                                    key={index}
-                                    className="text-gray-300 text-sm flex items-center"
-                                  >
-                                    <span className="w-2 h-2 bg-red-400 rounded-full mr-2"></span>
-                                    {risk}
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* AI Analysis Output - Show for both verified and unverified */}
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {"aiOutput" in result && (result as any).aiOutput && (
-                      <div className="mt-6 p-4 bg-gradient-to-r from-neon-blue/10 to-neon-purple/10 rounded-lg border border-neon-blue/30">
-                        <div className="flex items-center mb-3">
-                          <Brain className="h-5 w-5 text-neon-blue mr-2" />
-                          <h4 className="text-lg font-semibold text-white">
-                            AI Risk Analysis
-                          </h4>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-sm text-gray-400">
-                              Score:
-                            </span>
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                                (result as any).aiOutput.score >= 700
-                                  ? "bg-red-500/20 text-red-400 border border-red-500/40"
-                                  : /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                                  (result as any).aiOutput.score >= 400
-                                  ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                                  : "bg-green-500/20 text-green-400 border border-green-500/40"
-                              }`}
-                            >
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {(result as any).aiOutput.score}/1000
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-sm text-gray-400">
-                              Reason:
-                            </span>
-                            <p className="text-white text-sm mt-1">
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {(result as any).aiOutput.reason}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 0G Network Info */}
-            <div className="max-w-4xl mx-auto glass-card border border-neon-blue/30 rounded-xl p-8">
-              <div className="flex items-center mb-4">
-                <Database className="h-8 w-8 text-neon-blue mr-4" />
-                <h3 className="text-xl font-semibold text-white neon-text neon-blue">
-                  🔒 Secure Storage on 0G Network
-                </h3>
-              </div>
-              <p className="text-gray-300 leading-relaxed">
-                This analysis result is permanently stored on the 0G
-                Network&apos;s Storage + Data Availability layer. The result is
-                transparently verifiable and immutable. When the same contract
-                address is queried again, the reliable score is returned without
-                re-processing.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* How It Works Info */}
-        {!result && (
-          <div className="max-w-5xl mx-auto glass-card rounded-xl shadow-md border border-neon-blue/30 p-10">
-            <h3 className="text-3xl font-bold text-white mb-8 text-center neon-text neon-purple">
-              How the OWL Works
-            </h3>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-neon-blue/20 rounded-full flex items-center justify-center mx-auto mb-6 glow-blue">
-                  <span className="text-2xl font-bold text-neon-blue">1</span>
-                </div>
-                <h4 className="text-xl font-semibold text-white mb-3">
-                  Enter Address
-                </h4>
-                <p className="text-gray-400 leading-relaxed">
-                  Enter the Ethereum address of the smart contract you want to
-                  analyze
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-6 glow-purple">
-                  <span className="text-2xl font-bold text-neon-purple">2</span>
-                </div>
-                <h4 className="text-xl font-semibold text-white mb-3">
-                  AI Analysis
-                </h4>
-                <p className="text-gray-400 leading-relaxed">
-                  AI model analyzes the contract code and generates a security
-                  score
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-20 h-20 bg-neon-green/20 rounded-full flex items-center justify-center mx-auto mb-6 glow-green">
-                  <span className="text-2xl font-bold text-neon-green">3</span>
-                </div>
-                <h4 className="text-xl font-semibold text-white mb-3">
-                  Results
-                </h4>
-                <p className="text-gray-400 leading-relaxed">
-                  Score and findings are permanently stored on the 0G Network
-                </p>
               </div>
             </div>
           </div>

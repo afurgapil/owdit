@@ -28,12 +28,6 @@ export function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-10">
             <Link
-              href="/"
-              className="text-gray-300 hover:text-neon-blue px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 hover:bg-neon-blue/10"
-            >
-              HOME
-            </Link>
-            <Link
               href="/analyze"
               className="text-gray-300 hover:text-neon-purple px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 hover:bg-neon-purple/10"
             >
@@ -70,13 +64,6 @@ export function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-4 pt-4 pb-6 space-y-2 sm:px-6 border-t border-neon-blue/40 bg-black/95 backdrop-blur-xl rounded-b-2xl">
-              <Link
-                href="/"
-                className="text-gray-300 hover:text-neon-blue block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-blue/10"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                HOME
-              </Link>
               <Link
                 href="/analyze"
                 className="text-gray-300 hover:text-neon-purple block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-purple/10"
