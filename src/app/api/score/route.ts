@@ -18,31 +18,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: In the future, this will query 0G Storage/DA
-    // For now, return mock data
-    const mockResult = {
-      ...MOCK_ANALYSIS_RESULTS.completed,
-      chainId: chainId,
-    };
-
-    // Simulate checking if address exists in storage
-    if (address === mockResult.address) {
-      return NextResponse.json(
-        scoreResponseSchema.parse({
-          success: true,
-          data: mockResult,
-        }),
-        { status: 200 }
-      );
+    // Delegate to analyze API to compute a real score
+    const analyzeRes = await fetch(
+      `${
+        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+      }/api/analyze`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, chainId }),
+      }
+    );
+    const json = await analyzeRes.json();
+    if (analyzeRes.ok && json.success) {
+      return NextResponse.json(scoreResponseSchema.parse(json), {
+        status: 200,
+      });
     }
-
-    // Address not found in storage
     return NextResponse.json(
       scoreResponseSchema.parse({
         success: false,
-        error: "No analysis result found for this address",
+        error: json.error || "No analysis result found for this address",
       }),
-      { status: 404 }
+      { status: analyzeRes.status || 500 }
     );
   } catch (error) {
     console.error("Score API error:", error);

@@ -41,7 +41,7 @@ export default function HomePage() {
           <p className="text-2xl text-gray-300 mb-16 max-w-5xl mx-auto leading-relaxed">
             The <span className="text-owl-gold font-bold">OWL</span> watches
             over your smart contracts. AI-powered security analysis with
-            permanent storage on the 0G Network.
+            comprehensive security analysis and risk assessment.
           </p>
 
           {/* CTA Buttons */}
@@ -74,7 +74,7 @@ export default function HomePage() {
             </div>
             <div className="flex items-center space-x-2">
               <Shield className="h-4 w-4 text-neon-blue" />
-              <span>0G Network Storage</span>
+              <span>Secure Analysis</span>
             </div>
             <div className="flex items-center space-x-2">
               <Database className="h-4 w-4 text-neon-purple" />
@@ -160,7 +160,7 @@ export default function HomePage() {
                 <li className="flex items-center text-gray-300">
                   <CheckCircle className="h-7 w-7 text-green-400 mr-4" />
                   <span className="text-lg font-medium">
-                    Permanent storage on 0G
+                    Comprehensive security analysis
                   </span>
                 </li>
               </ul>
@@ -202,9 +202,9 @@ export default function HomePage() {
               },
               {
                 step: "3",
-                title: "SCORE STORAGE",
+                title: "SCORE ANALYSIS",
                 description:
-                  "Results are permanently stored on the 0G Network for future reference",
+                  "Get detailed security insights and recommendations for your smart contract",
                 lottieAnimation: storageAnimation,
               },
             ].map((item, index) => (

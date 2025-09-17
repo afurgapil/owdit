@@ -11,11 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { address, chainId } = analyzeRequestSchema.parse(body);
 
-    // TODO: In the future, this will:
-    // 1. ✅ Fetch contract source code from Etherscan/Sourcify (IMPLEMENTED)
-    // 2. Run AI analysis on 0G Compute Network
-    // 3. Store results on 0G Storage/DA
-    // 4. Record transaction on 0G Chain
+    // Fetch contract source code and perform analysis
 
     // Fetch contract source code
     const etherscanApiKey = process.env.ETHERSCAN_API_KEY;

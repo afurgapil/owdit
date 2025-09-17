@@ -28,7 +28,7 @@ const raleway = Raleway({
 export const metadata: Metadata = {
   title: "Owdit - Smart Contract Security Score",
   description:
-    "AI-powered smart contract security analysis. Secure and transparent score storage on 0G Network.",
+    "AI-powered smart contract security analysis with real-time verification and risk assessment.",
 };
 
 export default function RootLayout({

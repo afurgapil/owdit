@@ -1,13 +1,13 @@
 # Owdit - Smart Contract Security Score
 
-AI-powered smart contract security analysis platform built with the 0G Network.
+AI-powered smart contract security analysis platform with real-time contract verification and risk assessment.
 
 ## 🚀 Features
 
 - **AI-Powered Analysis**: Automated security vulnerability detection
-- **0G Network Integration**: Permanent storage on decentralized infrastructure
+- **Real-time Contract Verification**: Instant source code and bytecode analysis
 - **Real-time Scoring**: Instant security score generation
-- **Transparent Results**: Verifiable analysis stored on blockchain
+- **Transparent Results**: Verifiable analysis with detailed explanations
 - **Cyberpunk UI**: Futuristic, dark-themed interface with Matrix Rain effects
 
 ## 🛠️ Tech Stack
@@ -16,7 +16,7 @@ AI-powered smart contract security analysis platform built with the 0G Network.
 - **Styling**: Tailwind CSS with custom cyberpunk theme
 - **Validation**: Zod schemas
 - **Icons**: Lucide React
-- **Blockchain**: 0G Network integration (planned)
+- **Blockchain**: EVM-compatible contract inspection (Sourcify/Etherscan sources, RPC bytecode fetch)
 
 ## 🏗️ Project Structure
 

@@ -10,7 +10,7 @@ import { DevelopmentBanner } from "../../shared/components/DevelopmentBanner";
 export function HistoryContent() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock history data - in the future this will come from 0G Storage
+  // Mock history data - in the future this will come from persistent storage
   const mockHistory = [
     MOCK_ANALYSIS_RESULTS.completed, // Score: 78 (Medium Risk - should be neon-orange)
     {
