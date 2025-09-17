@@ -37,36 +37,3 @@ export const SECURITY_VULNERABILITIES = [
   "Storage Collision",
   "Uninitialized Variables",
 ] as const;
-
-// Mock data for development
-export const MOCK_ANALYSIS_RESULTS = {
-  pending: {
-    address: "0x1234567890123456789012345678901234567890",
-    chainId: 1,
-    score: 0,
-    level: "low" as const,
-    timestamp: new Date().toISOString(),
-    findings: [],
-    status: "pending" as const,
-  },
-  completed: {
-    address: "0x1234567890123456789012345678901234567890",
-    chainId: 1,
-    score: 78,
-    level: "medium" as const,
-    timestamp: new Date().toISOString(),
-    findings: [
-      {
-        title: "Reentrancy Guard",
-        detail: "Contract is protected against reentrancy attacks.",
-        severity: "low" as const,
-      },
-      {
-        title: "Access Control",
-        detail: "Access control mechanism exists for admin functions.",
-        severity: "low" as const,
-      },
-    ],
-    status: "completed" as const,
-  },
-} as const;

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scoreResponseSchema } from "../../../shared/lib/zodSchemas";
-import { MOCK_ANALYSIS_RESULTS } from "../../../shared/lib/constants";
 
 export async function GET(request: NextRequest) {
   try {

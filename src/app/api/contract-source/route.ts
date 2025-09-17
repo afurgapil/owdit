@@ -6,6 +6,7 @@ import {
 } from "../../../shared/lib/fetchers/contractSource";
 import { z } from "zod";
 import { transformToUnifiedFormat } from "../../../types/contractAnalysis";
+import { contractCache } from "../../../shared/lib/cache/mongodb";
 
 // Request validation schema
 const contractSourceRequestSchema = z.object({
@@ -93,6 +94,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check cache first
+    console.log(`🔍 [ContractSource] Checking cache for ${address}:${chainId}`);
+    const cachedAnalysis = await contractCache.getCachedAnalysis(
+      address,
+      chainId
+    );
+
+    if (cachedAnalysis) {
+      console.log(
+        `✅ [ContractSource] Returning cached analysis for ${address}:${chainId}`
+      );
+      return NextResponse.json(
+        contractSourceResponseSchema.parse({
+          success: true,
+          data: cachedAnalysis,
+        }),
+        { status: 200 }
+      );
+    }
+
     // Get Etherscan API key from environment (optional)
     const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
@@ -149,6 +170,22 @@ export async function GET(request: NextRequest) {
             };
             const unifiedData = transformToUnifiedFormat(riskAnalysisResult);
             console.log(`✅ [ContractSource] Unified risk data:`, unifiedData);
+
+            // Cache the analysis result (check if upgradeable from risk data)
+            const isUpgradeable = riskData.data.isUpgradeable || false;
+            try {
+              await contractCache.cacheAnalysis(
+                address,
+                chainId,
+                unifiedData,
+                isUpgradeable
+              );
+            } catch (cacheError) {
+              console.warn(
+                `⚠️ [ContractSource] Failed to cache risk analysis:`,
+                cacheError
+              );
+            }
 
             return NextResponse.json(
               contractSourceResponseSchema.parse({
@@ -244,6 +281,14 @@ export async function GET(request: NextRequest) {
     // Add AI output to unified data
     if (aiOutput) {
       unifiedData.aiOutput = aiOutput;
+    }
+
+    // Cache the analysis result (verified contracts are not upgradeable by default)
+    try {
+      await contractCache.cacheAnalysis(address, chainId, unifiedData, false);
+    } catch (cacheError) {
+      console.warn(`⚠️ [ContractSource] Failed to cache analysis:`, cacheError);
+      // Continue without caching - not critical
     }
 
     return NextResponse.json(
