@@ -10,7 +10,6 @@ import {
   Clock,
 } from "lucide-react";
 import { MatrixRain } from "../../shared/components/MatrixRain";
-import { DevelopmentBanner } from "../../shared/components/DevelopmentBanner";
 import {
   useHistory,
   ITEMS_PER_PAGE,
@@ -37,11 +36,6 @@ export function HistoryContent() {
 
       {/* Grid Pattern Overlay */}
       <div className="grid-pattern absolute inset-0 pointer-events-none"></div>
-
-      {/* Development Banner */}
-      <div className="relative z-20">
-        <DevelopmentBanner />
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-16">
         {/* Header */}

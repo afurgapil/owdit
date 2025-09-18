@@ -5,8 +5,103 @@ import {
   ContractSource,
 } from "../../../shared/lib/fetchers/contractSource";
 import { z } from "zod";
-import { transformToUnifiedFormat } from "../../../types/contractAnalysis";
+import {
+  transformToUnifiedFormat,
+  UnifiedContractAnalysis,
+} from "../../../types/contractAnalysis";
 import { contractCache } from "../../../shared/lib/cache/mongodb";
+
+// Normalize potentially legacy/invalid cached shapes into expected unified schema
+function normalizeUnifiedData(
+  raw: unknown
+): UnifiedContractAnalysis | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+
+  const source = raw as Record<string, unknown>;
+  const normalized: Record<string, unknown> = { ...source };
+
+  // Ensure contractInfo exists and has correct types
+  const rawContractInfo = (source["contractInfo"] || {}) as Record<
+    string,
+    unknown
+  >;
+  const contractInfo: Record<string, unknown> = { ...rawContractInfo };
+
+  // Coerce name and compilerVersion to strings or drop
+  const name = contractInfo["name"];
+  if (name !== undefined) {
+    contractInfo["name"] =
+      typeof name === "string" && name.length > 0 ? name : undefined;
+  }
+
+  const compilerVersion = contractInfo["compilerVersion"];
+  if (compilerVersion !== undefined) {
+    contractInfo["compilerVersion"] =
+      typeof compilerVersion === "string" && compilerVersion.length > 0
+        ? compilerVersion
+        : undefined;
+  }
+
+  // Coerce isContract to boolean if provided as string
+  const isContract = contractInfo["isContract"];
+  if (typeof isContract !== "boolean") {
+    if (typeof isContract === "string") {
+      const lower = isContract.toLowerCase();
+      if (lower === "true" || lower === "false") {
+        contractInfo["isContract"] = lower === "true";
+      }
+    }
+  }
+
+  const bytecodeLength = contractInfo["bytecodeLength"];
+  if (bytecodeLength !== undefined) {
+    const coerced =
+      typeof bytecodeLength === "number"
+        ? bytecodeLength
+        : Number.parseInt(String(bytecodeLength), 10);
+    contractInfo["bytecodeLength"] = Number.isFinite(coerced)
+      ? coerced
+      : undefined;
+  }
+  normalized["contractInfo"] = contractInfo;
+
+  // Guard bytecodeAnalysis shape; drop if invalid
+  const ba = source["bytecodeAnalysis"] as unknown;
+  const baObj =
+    ba && typeof ba === "object" ? (ba as Record<string, unknown>) : null;
+  const baValid = !!(
+    baObj &&
+    Array.isArray(baObj["selectors"]) &&
+    typeof baObj["opcodeCounters"] === "object" &&
+    baObj["risk"] &&
+    typeof baObj["risk"] === "object" &&
+    Array.isArray((baObj["risk"] as Record<string, unknown>)["risks"]) &&
+    typeof (baObj["risk"] as Record<string, unknown>)["severity"] === "string"
+  );
+  if (!baValid) {
+    normalized["bytecodeAnalysis"] = undefined;
+  }
+
+  // Validate sourceCode shape: must be object with files: [{path, content}]
+  const sc = source["sourceCode"] as unknown;
+  const scObj =
+    sc && typeof sc === "object" ? (sc as Record<string, unknown>) : null;
+  const files = scObj?.["files"] as unknown as Array<unknown> | undefined;
+  const filesValid = Array.isArray(files)
+    ? files.every(
+        (f) =>
+          f &&
+          typeof f === "object" &&
+          typeof (f as Record<string, unknown>)["path"] === "string" &&
+          typeof (f as Record<string, unknown>)["content"] === "string"
+      )
+    : false;
+  if (!filesValid) {
+    normalized["sourceCode"] = undefined;
+  }
+
+  return normalized as unknown as UnifiedContractAnalysis;
+}
 
 // Request validation schema
 const contractSourceRequestSchema = z.object({
@@ -45,7 +140,7 @@ const contractSourceResponseSchema = z.object({
           selectors: z.array(z.string()),
           opcodeCounters: z.record(z.string(), z.number()),
           risk: z.object({
-            severity: z.enum(["low", "medium", "high", "unknown"]),
+            severity: z.enum(["none", "low", "medium", "high", "unknown"]),
             risks: z.array(z.string()),
           }),
         })
@@ -105,13 +200,24 @@ export async function GET(request: NextRequest) {
       console.log(
         `✅ [ContractSource] Returning cached analysis for ${address}:${chainId}`
       );
-      return NextResponse.json(
-        contractSourceResponseSchema.parse({
-          success: true,
-          data: cachedAnalysis,
-        }),
-        { status: 200 }
-      );
+      const normalized = normalizeUnifiedData(cachedAnalysis);
+      if (!normalized) {
+        // Bad cache entry; delete and treat as cache miss
+        try {
+          await contractCache.deleteCachedAnalysis(address, chainId);
+          console.warn(
+            `⚠️ [ContractSource] Deleted invalid cached analysis for ${address}:${chainId}`
+          );
+        } catch {}
+      } else {
+        return NextResponse.json(
+          contractSourceResponseSchema.parse({
+            success: true,
+            data: normalized,
+          }),
+          { status: 200 }
+        );
+      }
     }
 
     // Get Etherscan API key from environment (optional)

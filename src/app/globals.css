@@ -230,6 +230,206 @@ body {
   animation: owl-float 4s ease-in-out infinite;
 }
 
+/* Analyze Loading Overlay */
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+      1200px 600px at 50% -10%,
+      rgba(0, 243, 255, 0.08),
+      transparent
+    ),
+    radial-gradient(
+      1000px 500px at 120% 120%,
+      rgba(180, 0, 255, 0.06),
+      transparent
+    ),
+    rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.loader-card {
+  width: min(720px, 92vw);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  background: linear-gradient(
+    180deg,
+    rgba(10, 12, 20, 0.9),
+    rgba(8, 8, 14, 0.9)
+  );
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 243, 255, 0.15);
+  border-radius: 12px;
+  padding: 18px 18px 14px 18px;
+  color: #e5e7eb;
+  position: relative;
+  overflow: hidden;
+}
+.loader-card .loader-body {
+  padding-top: 8px;
+}
+
+.loader-card .ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  position: relative;
+  border: 2px dashed rgba(0, 243, 255, 0.35);
+}
+.loader-card .orbit {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  animation: orbit-rotate 2.4s linear infinite;
+}
+.loader-card .dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--neon-blue);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+}
+.loader-card .dot:nth-child(1) {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.loader-card .dot:nth-child(2) {
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--neon-purple);
+  box-shadow: 0 0 10px rgba(180, 0, 255, 0.6);
+}
+.loader-card .dot:nth-child(3) {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--neon-green);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.6);
+}
+
+@keyframes orbit-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-card .loader-conveyor {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  clip-path: inset(0 round 6px);
+  /* highlight band */
+  isolation: isolate;
+}
+.loader-card .loader-conveyor::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 243, 255, 0.12) 48%,
+    rgba(0, 243, 255, 0.12) 52%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  z-index: 2;
+}
+.loader-card .loader-belt {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  animation: belt-scroll 18s linear infinite;
+  white-space: nowrap;
+  width: max-content;
+  will-change: transform;
+  transform: translateZ(0);
+  z-index: 1;
+}
+.loader-card .loader-tile {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: rgba(11, 14, 22, 0.75);
+  padding: 8px 12px;
+  min-width: 140px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: saturate(1.1);
+  transition: background 0.25s, box-shadow 0.25s, transform 0.25s,
+    border-color 0.25s;
+  animation: tile-pulse 2.8s ease-in-out infinite;
+}
+.loader-card .loader-tile-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: #d1d5db;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@keyframes belt-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes tile-pulse {
+  0%,
+  100% {
+    background: rgba(11, 14, 22, 0.75);
+    box-shadow: 0 0 0 rgba(0, 243, 255, 0);
+    transform: translateZ(0) scale(1);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  50% {
+    background: rgba(0, 243, 255, 0.08);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
+    transform: translateZ(0) scale(1);
+    border-color: rgba(0, 243, 255, 0.25);
+  }
+}
+
+.loader-card .loader-meta {
+  opacity: 0.8;
+}
+.loader-card .loader-meta .line {
+  height: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.loader-card .loader-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
 /* Matrix Rain - Grid-based Professional */
 @keyframes matrix-rain-kf {
   0% {
