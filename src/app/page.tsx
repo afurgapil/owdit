@@ -56,11 +56,20 @@ export default function HomePage() {
               </span>
             </Link>
             <Link
+              href="/learn"
+              className="px-12 py-6 text-xl font-bold rounded-xl border-3 border-neon-orange text-neon-orange hover:bg-neon-orange transition-all duration-300 hover-glow transform hover:scale-105"
+            >
+              <span className="flex items-center">
+                <Brain className="mr-3 h-6 w-6" />
+                LEARN SECURITY
+              </span>
+            </Link>
+            <Link
               href="#how-it-works"
               className="px-12 py-6 text-xl font-bold rounded-xl border-3 border-neon-purple text-neon-purple hover:bg-neon-purple transition-all duration-300 hover-glow transform hover:scale-105"
             >
               <span className="flex items-center">
-                <Brain className="mr-3 h-6 w-6" />
+                <Database className="mr-3 h-6 w-6" />
                 HOW IT WORKS
               </span>
             </Link>

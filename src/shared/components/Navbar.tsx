@@ -34,6 +34,12 @@ export function Navbar() {
               ANALYZE
             </Link>
             <Link
+              href="/learn"
+              className="text-gray-300 hover:text-neon-orange px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 hover:bg-neon-orange/10"
+            >
+              LEARN
+            </Link>
+            <Link
               href="/history"
               className="text-gray-300 hover:text-neon-green px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 hover:bg-neon-green/10"
             >
@@ -72,8 +78,15 @@ export function Navbar() {
                 ANALYZE
               </Link>
               <Link
+                href="/learn"
+                className="text-gray-300 hover:text-neon-orange block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-orange/10"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                LEARN
+              </Link>
+              <Link
                 href="/history"
-                className="text-gray-300 hover:text-neon-green block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-purple/10"
+                className="text-gray-300 hover:text-neon-green block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-green/10"
                 onClick={() => setIsMenuOpen(false)}
               >
                 HISTORY
