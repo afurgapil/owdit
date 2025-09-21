@@ -100,7 +100,7 @@ export function useHistory(): UseHistoryReturn {
   // Initial load
   useEffect(() => {
     fetchHistory(0, searchTerm);
-  }, []);
+  }, [searchTerm]);
 
   return {
     historyData,

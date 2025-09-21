@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { contractCache } from "../../../shared/lib/cache/mongodb";
+import { NextResponse } from "next/server";
+import { contractCache } from "../../../../shared/lib/cache/mongodb";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const stats = await contractCache.getCacheStats();
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   try {
     const cleanedCount = await contractCache.cleanExpiredCache();
 
