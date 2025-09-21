@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { inferRiskOn0G } from "../../../shared/lib/zeroG/infer";
+import { inferRiskOn0G } from "../../../../shared/lib/zeroG/infer";
 
 const inferRequestSchema = z.object({
   features: z.object({
@@ -114,25 +114,69 @@ export async function POST(req: NextRequest) {
         { status: 200 }
       );
     } else {
-      // For unverified contracts, use 0G inference (if available)
+      // For unverified contracts, use 0G inference with timeout
+      console.log(`🤖 [Infer] Analyzing unverified contract with 0G AI`);
+
       try {
-        const out = await inferRiskOn0G(parsed.data.features);
+        // Set a timeout for 0G inference
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("0G inference timeout")), 15000)
+        );
+
+        const inferencePromise = inferRiskOn0G(parsed.data.features);
+
+        const out = await Promise.race([inferencePromise, timeoutPromise]);
         return NextResponse.json(
           inferResponseSchema.parse({ success: true, data: out }),
           { status: 200 }
         );
-      } catch (zgError) {
-        console.warn("0G inference failed, using mock analysis:", zgError);
+      } catch (error) {
+        console.warn("0G inference failed or timed out:", error);
 
-        // Fallback to mock analysis for unverified contracts
-        const mockResult = {
-          score: 30, // Lower score for unverified contracts
-          reason:
-            "Unverified contract - source code not available for analysis. Risk assessment based on bytecode analysis only.",
+        // Fallback to heuristic analysis based on bytecode
+        const features = parsed.data.features;
+        const opcodeCounters = features.opcodeCounters || {};
+        const selectors = features.selectors || [];
+
+        let score = 80; // Base score for unverified contracts (high risk)
+        let reason = "Unverified contract - source code not available";
+
+        // Risk assessment based on dangerous opcodes (lower score = more dangerous)
+        if (opcodeCounters.DELEGATECALL > 0) {
+          score = Math.min(score, 20); // Very dangerous
+          reason += ". Contains DELEGATECALL - critical risk";
+        }
+        if (opcodeCounters.SELFDESTRUCT > 0) {
+          score = Math.min(score, 15); // Very dangerous
+          reason += ". Contains SELFDESTRUCT - critical risk";
+        }
+        if (opcodeCounters.CALLCODE > 0) {
+          score = Math.min(score, 30); // Dangerous
+          reason += ". Contains CALLCODE - high risk";
+        }
+        if (opcodeCounters.CREATE2 > 0) {
+          score = Math.min(score, 40); // Medium risk
+          reason += ". Contains CREATE2 - medium risk";
+        }
+
+        // Adjust based on function count (more functions = more complex = more risk)
+        if (selectors.length > 20) {
+          score = Math.min(score, score - 10);
+          reason += ". High function count - increased complexity";
+        }
+
+        // Ensure score is between 0-100 (0 = most dangerous, 100 = safest)
+        score = Math.max(0, Math.min(100, score));
+
+        const fallbackResult = {
+          score: Math.round(score),
+          reason: reason,
         };
 
+        console.log(`✅ [Infer] Fallback analysis result:`, fallbackResult);
+
         return NextResponse.json(
-          inferResponseSchema.parse({ success: true, data: mockResult }),
+          inferResponseSchema.parse({ success: true, data: fallbackResult }),
           { status: 200 }
         );
       }

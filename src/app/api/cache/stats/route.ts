@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { contractCache } from "../../../../shared/lib/cache/mongodb";
+import { contractCache } from "../../../shared/lib/cache/mongodb";
 
 export async function GET(request: NextRequest) {
   try {

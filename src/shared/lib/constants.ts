@@ -4,8 +4,8 @@ export const APP_DESCRIPTION = "Smart Contract Security Score - On 0G Network";
 
 // API endpoints
 export const API_ENDPOINTS = {
-  SCORE: "/api/score",
-  ANALYZE: "/api/analyze",
+  SCORE: "/api/contract-analysis/score",
+  ANALYZE: "/api/contract-analysis/analyze",
 } as const;
 
 // Risk levels

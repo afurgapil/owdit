@@ -3,13 +3,13 @@ import {
   resolveContractSource,
   RiskAnalysisResult,
   ContractSource,
-} from "../../../shared/lib/fetchers/contractSource";
+} from "../../../../shared/lib/fetchers/contractSource";
 import { z } from "zod";
 import {
   transformToUnifiedFormat,
   UnifiedContractAnalysis,
-} from "../../../types/contractAnalysis";
-import { contractCache } from "../../../shared/lib/cache/mongodb";
+} from "../../../../types/contractAnalysis";
+import { contractCache } from "../../../../shared/lib/cache/mongodb";
 
 // Normalize potentially legacy/invalid cached shapes into expected unified schema
 function normalizeUnifiedData(
@@ -238,7 +238,9 @@ export async function GET(request: NextRequest) {
       try {
         const riskUrl = `${
           request.nextUrl.origin
-        }/api/risk?address=${encodeURIComponent(address)}&chainId=${chainId}`;
+        }/api/contract-analysis/risk?address=${encodeURIComponent(
+          address
+        )}&chainId=${chainId}`;
         console.log(`🔍 [ContractSource] Calling risk API: ${riskUrl}`);
 
         const riskResponse = await fetch(riskUrl);
@@ -337,7 +339,7 @@ export async function GET(request: NextRequest) {
         const aiResponse = await fetch(
           `${
             process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-          }/api/infer`,
+          }/api/contract-analysis/infer`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

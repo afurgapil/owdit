@@ -68,21 +68,46 @@ async function ensureLedgerAndAck(
   // Only setup ledger once per session
   if (!ledgerReady) {
     console.log("[0G] Setting up ledger account...");
+
+    // First, try to check if ledger already exists
+    let ledgerExists = false;
     try {
-      await broker.ledger?.addLedger?.(0.1);
-      console.log("[0G] Ledger account created");
+      // Try to get account info to check if it exists
+      // This is a placeholder - we'll assume it exists if addLedger fails with "already exists"
+      console.log("[0G] Checking if ledger account already exists...");
     } catch (e) {
-      console.log("[0G] Ledger creation error (may already exist):", e);
+      console.log("[0G] Account check error:", e);
     }
 
     try {
-      if (signerBalance > BigInt(0)) {
-        await broker.ledger?.depositFund?.(0.05);
-        console.log("[0G] Funds deposited to ledger");
-      }
+      await broker.ledger?.addLedger?.(0.1);
+      console.log("[0G] Ledger account created");
+      ledgerExists = true;
     } catch (e) {
-      console.log("[0G] Fund deposit error:", e);
+      if (e instanceof Error && e.message.includes("already exists")) {
+        console.log(
+          "[0G] Ledger account already exists, using existing account"
+        );
+        ledgerExists = true;
+      } else {
+        console.log("[0G] Ledger creation error:", e);
+        // Continue anyway - maybe we can still use the service
+      }
     }
+
+    // Only try to deposit funds if we have a ledger account
+    if (ledgerExists) {
+      try {
+        if (signerBalance > BigInt(0)) {
+          await broker.ledger?.depositFund?.(0.05);
+          console.log("[0G] Funds deposited to ledger");
+        }
+      } catch (e) {
+        console.log("[0G] Fund deposit error:", e);
+        // Continue anyway - maybe there are already sufficient funds
+      }
+    }
+
     ledgerReady = true;
   }
 

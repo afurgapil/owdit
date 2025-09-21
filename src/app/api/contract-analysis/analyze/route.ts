@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   analyzeRequestSchema,
   scoreResponseSchema,
-} from "../../../shared/lib/zodSchemas";
-import { resolveContractSource } from "../../../shared/lib/fetchers/contractSource";
-import { transformToUnifiedFormat } from "../../../types/contractAnalysis";
-import { contractCache } from "../../../shared/lib/cache/mongodb";
+} from "../../../../shared/lib/zodSchemas";
+import { resolveContractSource } from "../../../../shared/lib/fetchers/contractSource";
+import { transformToUnifiedFormat } from "../../../../types/contractAnalysis";
+import { contractCache } from "../../../../shared/lib/cache/mongodb";
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       const aiRes = await fetch(
         `${
           process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-        }/api/infer`,
+        }/api/contract-analysis/infer`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -43,7 +43,7 @@ export function useContractSearch(): UseContractSearchReturn {
       setResult(null); // Clear previous results before starting new analysis
 
       // Get contract source (with risk analysis fallback)
-      const url = `/api/contract-source?address=${encodeURIComponent(
+      const url = `/api/contract-analysis/contract-source?address=${encodeURIComponent(
         address
       )}&chainId=${selectedChain.id}`;
       console.log("[ContractSource] Request", {

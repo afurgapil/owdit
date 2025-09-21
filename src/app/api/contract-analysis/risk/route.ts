@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getChainById } from "../../../shared/lib/chains";
-import { BytecodeAnalyzer } from "../../../shared/lib/bytecodeAnalyzer";
+import { getChainById } from "../../../../shared/lib/chains";
+import { BytecodeAnalyzer } from "../../../../shared/lib/bytecodeAnalyzer";
 
 // ---- Schemas ----
 const riskRequestSchema = z.object({
@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
       const aiResponse = await fetch(
         `${
           process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-        }/api/infer`,
+        }/api/contract-analysis/infer`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
