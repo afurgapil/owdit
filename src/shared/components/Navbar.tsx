@@ -34,6 +34,12 @@ export function Navbar() {
               ANALYZE
             </Link>
             <Link
+              href="/developers"
+              className="text-gray-300 hover:text-neon-cyan px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 hover:bg-neon-cyan/10"
+            >
+              DEVELOPERS
+            </Link>
+            <Link
               href="/learn"
               className="text-gray-300 hover:text-neon-orange px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 hover:bg-neon-orange/10"
             >
@@ -76,6 +82,13 @@ export function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 ANALYZE
+              </Link>
+              <Link
+                href="/developers"
+                className="text-gray-300 hover:text-neon-cyan block px-4 py-3 rounded-lg text-base font-bold transition-all duration-300 hover:bg-neon-cyan/10"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                DEVELOPERS
               </Link>
               <Link
                 href="/learn"

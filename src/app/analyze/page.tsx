@@ -56,16 +56,28 @@ function AnalyzeContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-8 sm:py-12 lg:py-16">
         {/* Header */}
-        <div className="text-center mb-8 sm:mb-12 lg:mb-16">
-          <div className="flex justify-center mb-8"></div>
-        </div>
 
         {/* Demo Contracts Section */}
-        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
-          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="text-center mb-6 sm:mb-8">
+          {/* Demo Section Header */}
+          <div className="mb-6">
+            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-neon-purple/20 to-neon-blue/20 border border-neon-purple/30 rounded-full text-neon-purple font-bold text-lg mb-4">
+              <Database className="h-6 w-6 mr-3" />
+              DEMO CONTRACTS
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+              Try with Example Contracts
+            </h2>
+            <p className="text-base text-gray-300 max-w-2xl mx-auto">
+              Select one of our demo contracts to see how the OWL analyzes smart
+              contracts
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             {/* Verified Contract Demo */}
             <button
-              className={`p-4 sm:p-6 transition-all duration-300 cursor-pointer group text-center transform hover:scale-105 hover:shadow-lg w-full ${
+              className={`p-3 sm:p-4 transition-all duration-300 cursor-pointer group text-center transform hover:scale-105 hover:shadow-lg w-full ${
                 selectedDemoContract ===
                 "0x56182792540295095ea6e269C6680E98FEAaC73E"
                   ? "border-2 border-green-400 bg-green-900/20 shadow-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
@@ -87,11 +99,11 @@ function AnalyzeContent() {
                   }`}
                 ></div>
                 <h3 className="font-bold text-green-400 text-lg">
-                  Verified Contract
+                  📋 DEMO: Verified Contract
                 </h3>
               </div>
               <p className="text-gray-300 mb-3 text-sm">
-                Counter Contract on Sepolia
+                📝 Example: Counter Contract on Sepolia
               </p>
               <div className="text-xs text-gray-400 font-mono mb-3 bg-gray-800/50 p-2 rounded break-all leading-relaxed">
                 0x56182792540295095ea6e269C6680E98FEAaC73E
@@ -100,8 +112,8 @@ function AnalyzeContent() {
                 <div className="text-sm text-green-300 font-medium group-hover:text-green-200 transition-colors">
                   {selectedDemoContract ===
                   "0x56182792540295095ea6e269C6680E98FEAaC73E"
-                    ? "✓ Selected"
-                    : "Select for Analysis"}
+                    ? "✓ Demo Selected"
+                    : "Try This Demo"}
                 </div>
                 <a
                   href="https://sepolia.etherscan.io/address/0x56182792540295095ea6e269C6680E98FEAaC73E"
@@ -117,7 +129,7 @@ function AnalyzeContent() {
 
             {/* Unverified Contract Demo */}
             <button
-              className={`p-4 sm:p-6 transition-all duration-300 cursor-pointer group text-center transform hover:scale-105 hover:shadow-lg w-full ${
+              className={`p-3 sm:p-4 transition-all duration-300 cursor-pointer group text-center transform hover:scale-105 hover:shadow-lg w-full ${
                 selectedDemoContract ===
                 "0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
                   ? "border-2 border-orange-400 bg-orange-900/20 shadow-orange-500/20 shadow-[0_0_20px_rgba(251,146,60,0.3)]"
@@ -139,11 +151,11 @@ function AnalyzeContent() {
                   }`}
                 ></div>
                 <h3 className="font-bold text-orange-400 text-lg">
-                  Unverified Contract
+                  🔍 DEMO: Unverified Contract
                 </h3>
               </div>
               <p className="text-gray-300 mb-3 text-sm">
-                Custom Contract on Sepolia
+                🔧 Example: Custom Contract on Sepolia
               </p>
               <div className="text-xs text-gray-400 font-mono mb-3 bg-gray-800/50 p-2 rounded break-all leading-relaxed">
                 0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76
@@ -152,8 +164,8 @@ function AnalyzeContent() {
                 <div className="text-sm text-orange-300 font-medium group-hover:text-orange-200 transition-colors">
                   {selectedDemoContract ===
                   "0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
-                    ? "✓ Selected"
-                    : "Select for Analysis"}
+                    ? "✓ Demo Selected"
+                    : "Try This Demo"}
                 </div>
                 <a
                   href="https://sepolia.etherscan.io/address/0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76"
@@ -168,17 +180,17 @@ function AnalyzeContent() {
             </button>
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="mt-3 text-center">
             <p className="text-sm text-gray-400">
               {selectedDemoContract
-                ? "Click the button above to analyze the selected contract"
-                : "Select a demo contract above to get started"}
+                ? "Click the analyze button below to test with the selected demo contract"
+                : "Choose a demo contract above to see how the OWL analyzes smart contracts"}
             </p>
           </div>
         </div>
 
         {/* Address Input */}
-        <div className="mb-8 sm:mb-12 lg:mb-16">
+        <div className="mb-6 sm:mb-8">
           <AddressInput
             value={address}
             onChange={setAddress}

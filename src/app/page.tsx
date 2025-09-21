@@ -12,12 +12,6 @@ import {
   Lock,
 } from "lucide-react";
 import { MatrixRain } from "../shared/components/MatrixRain";
-import Lottie from "lottie-react";
-
-// Import Lottie animation files
-import contractInputAnimation from "../../public/searchbar.json";
-import aiAnalysisAnimation from "../../public/analyze.json";
-import storageAnimation from "../../public/serverstorage.json";
 
 export default function HomePage() {
   return (
@@ -56,6 +50,15 @@ export default function HomePage() {
               </span>
             </Link>
             <Link
+              href="/developers"
+              className="px-12 py-6 text-xl font-bold rounded-xl border-3 border-neon-cyan text-neon-cyan hover:bg-neon-cyan transition-all duration-300 hover-glow transform hover:scale-105"
+            >
+              <span className="flex items-center">
+                <Cpu className="mr-3 h-6 w-6" />
+                DEVELOPER TOOLS
+              </span>
+            </Link>
+            <Link
               href="/learn"
               className="px-12 py-6 text-xl font-bold rounded-xl border-3 border-neon-orange text-neon-orange hover:bg-neon-orange transition-all duration-300 hover-glow transform hover:scale-105"
             >
@@ -80,6 +83,10 @@ export default function HomePage() {
             <div className="flex items-center space-x-2">
               <Lock className="h-4 w-4 text-neon-green" />
               <span>AI-Powered Analysis</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Cpu className="h-4 w-4 text-neon-cyan" />
+              <span>Developer Tools</span>
             </div>
             <div className="flex items-center space-x-2">
               <Shield className="h-4 w-4 text-neon-blue" />
@@ -189,32 +196,43 @@ export default function HomePage() {
               HOW THE OWL WORKS
             </h2>
             <p className="text-2xl text-gray-300 max-w-4xl mx-auto">
-              Get your contract security score in 3 simple steps
+              Get your contract security score in 4 simple steps
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
             {[
               {
                 step: "1",
                 title: "ENTER CONTRACT ADDRESS",
                 description:
                   "Enter the Ethereum address of the smart contract you want the OWL to analyze",
-                lottieAnimation: contractInputAnimation,
+                icon: Database,
+                color: "text-neon-blue",
               },
               {
                 step: "2",
-                title: "AI ANALYSIS",
+                title: "DEVELOPER TOOLS",
                 description:
-                  "The OWL's AI brain analyzes the contract code and generates a comprehensive security score",
-                lottieAnimation: aiAnalysisAnimation,
+                  "Use our developer tools to analyze your own contract code with AI-powered security analysis",
+                icon: Cpu,
+                color: "text-neon-cyan",
               },
               {
                 step: "3",
+                title: "AI ANALYSIS",
+                description:
+                  "The OWL's AI brain analyzes the contract code and generates a comprehensive security score",
+                icon: Brain,
+                color: "text-neon-purple",
+              },
+              {
+                step: "4",
                 title: "SCORE ANALYSIS",
                 description:
                   "Get detailed security insights and recommendations for your smart contract",
-                lottieAnimation: storageAnimation,
+                icon: Shield,
+                color: "text-neon-green",
               },
             ].map((item, index) => (
               <div
@@ -222,13 +240,8 @@ export default function HomePage() {
                 className="glass-card p-10 rounded-3xl text-center hover-glow transition-all duration-300 transform hover:scale-105"
               >
                 <div className="flex justify-center mb-6">
-                  <div className="w-40 h-40 flex items-center justify-center relative overflow-hidden rounded-2xl ">
-                    <Lottie
-                      animationData={item.lottieAnimation}
-                      loop={true}
-                      autoplay={true}
-                      className="w-full h-full"
-                    />
+                  <div className="w-40 h-40 flex items-center justify-center relative overflow-hidden rounded-2xl bg-gradient-to-br from-black/40 to-black/20 border border-white/10">
+                    <item.icon className={`w-20 h-20 ${item.color}`} />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-white mb-6 neon-text">
@@ -254,15 +267,26 @@ export default function HomePage() {
               Get your first contract security score and join the future of
               decentralized security
             </p>
-            <Link
-              href="/analyze"
-              className="btn-cyberpunk px-16 py-8 text-2xl rounded-xl hover-glow inline-block transform hover:scale-105 transition-all duration-300"
-            >
-              <span className="flex items-center">
-                START CONTRACT ANALYSIS
-                <ArrowRight className="ml-4 h-8 w-8" />
-              </span>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Link
+                href="/analyze"
+                className="flex flex-row justify-center items-center btn-cyberpunk px-16 py-8 text-2xl rounded-xl hover-glow  transform hover:scale-105 transition-all duration-300"
+              >
+                <span className="flex flex-row justify-center items-center">
+                  <p>START CONTRACT ANALYSIS</p>
+                  <ArrowRight className="ml-4 h-8 w-8" />
+                </span>
+              </Link>
+              <Link
+                href="/developers"
+                className="px-16 py-8 text-2xl font-bold rounded-xl border-3 border-neon-cyan text-neon-cyan hover:bg-neon-cyan transition-all duration-300 hover-glow inline-block transform hover:scale-105"
+              >
+                <span className="flex items-center">
+                  <Cpu className="mr-4 h-8 w-8" />
+                  DEVELOPER TOOLS
+                </span>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
