@@ -40,7 +40,7 @@ export const SUPPORTED_CHAINS: Chain[] = [
     sourcify: true,
     etherscan: "https://api-holesky.etherscan.io",
     rpc: "https://ethereum-holesky.publicnode.com",
-    isActive: true, // Enabled for testing
+    isActive: false, // Enabled for testing
   },
   {
     id: 137,

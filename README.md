@@ -36,6 +36,45 @@ Owdit is a smart contract security analysis platform that combines bytecode/sour
 - 📊 **History & Search**: Real-time history endpoint with pagination and search
 - 🎨 **Modern UI**: Cyberpunk-themed, responsive interface
 
+## 🧠 How It Works
+
+- Frontend pages submit contract addresses or raw Solidity code to the `contract-analysis` API namespace.
+- The API checks MongoDB first; cache hits return immediately and power the history/stats views.
+- Cache misses trigger source resolution via Sourcify/Etherscan or bytecode heuristics with proxy detection when the source is unavailable.
+- 0G inference produces AI scoring with safeguards: verified contracts fall back to rule-based scoring, unverified bytecode uses opcode heuristics.
+- Non-upgradeable results persist in MongoDB, while upgradeable findings skip caching to avoid stale data.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Next.js UI
+    participant AnalyzeAPI as /api/contract-analysis/analyze
+    participant Cache as MongoDB Cache
+    participant Source as resolveContractSource()
+    participant RiskAPI as /api/contract-analysis/risk
+    participant InferAPI as /api/contract-analysis/infer
+
+    User->>UI: Submit contract address
+    UI->>AnalyzeAPI: POST analyze
+    AnalyzeAPI->>Cache: Lookup cached analysis
+    alt Cache hit
+        Cache-->>AnalyzeAPI: Return stored report
+    else Cache miss
+        AnalyzeAPI->>Source: Fetch source & ABI
+        alt Source verified
+            Source-->>AnalyzeAPI: Contract metadata + files
+        else Unverified
+            AnalyzeAPI->>RiskAPI: GET bytecode analysis
+            RiskAPI-->>AnalyzeAPI: Selectors, opcode counters, risk
+        end
+        AnalyzeAPI->>InferAPI: POST extracted features
+        InferAPI-->>AnalyzeAPI: Score + narrative
+        AnalyzeAPI->>Cache: Persist non-upgradeable result
+    end
+    AnalyzeAPI-->>UI: JSON report (score, metadata)
+    UI-->>User: Render security findings
+```
+
 ## 🏗️ Architecture
 
 ### Frontend
@@ -57,6 +96,17 @@ Owdit is a smart contract security analysis platform that combines bytecode/sour
 - **Cache Service**: Singleton MongoDB client, TTL, upgradeable skip
 - **History API**: `/api/history` with pagination and search
 - **Cache Stats API**: `/api/cache/stats` for observability
+
+## 🔌 Core API Routes
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/contract-analysis/analyze` | POST | Entry point for address-based analysis, cache lookup, optional AI scoring |
+| `/api/contract-analysis/contract-source` | GET | Retrieves unified contract data (source or bytecode fallback) with caching |
+| `/api/contract-analysis/risk` | GET | Runs bytecode heuristics, proxy detection, and optional AI scoring for unverified contracts |
+| `/api/contract-analysis/analyze-code` | POST | Accepts raw Solidity (or other) code and returns structured security and quality findings |
+| `/api/contract-analysis/infer` | POST | Thin wrapper over 0G inference with deterministic fallbacks |
+| `/api/cache/stats` | GET/DELETE | Reports cache health metrics or purges expired entries |
 
 ## 📋 Prerequisites
 
