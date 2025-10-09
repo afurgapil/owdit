@@ -100,6 +100,20 @@ function normalizeUnifiedData(
     normalized["sourceCode"] = undefined;
   }
 
+  // Ensure aiOutput is either a valid object shape or undefined
+  const ai = source["aiOutput"] as unknown;
+  const aiObj =
+    ai && typeof ai === "object" ? (ai as Record<string, unknown>) : null;
+  const aiValid = !!(
+    aiObj &&
+    typeof aiObj["score"] === "number" &&
+    Number.isFinite(aiObj["score"]) &&
+    typeof aiObj["reason"] === "string"
+  );
+  if (!aiValid) {
+    normalized["aiOutput"] = undefined;
+  }
+
   return normalized as unknown as UnifiedContractAnalysis;
 }
 
