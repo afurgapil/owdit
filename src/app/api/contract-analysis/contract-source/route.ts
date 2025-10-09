@@ -10,6 +10,7 @@ import {
   UnifiedContractAnalysis,
 } from "../../../../types/contractAnalysis";
 import { contractCache } from "../../../../shared/lib/cache/mongodb";
+import { genRequestId, logger } from "../../../../shared/lib/logger";
 
 // Normalize potentially legacy/invalid cached shapes into expected unified schema
 function normalizeUnifiedData(
@@ -173,6 +174,8 @@ const contractSourceResponseSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const requestId = genRequestId();
+  const log = logger.with("contract-source", requestId);
   try {
     const { searchParams } = new URL(request.url);
     const chainId = parseInt(searchParams.get("chainId") || "1");
@@ -204,24 +207,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Check cache first
-    console.log(`🔍 [ContractSource] Checking cache for ${address}:${chainId}`);
+    log.info("Checking cache", { address, chainId });
     const cachedAnalysis = await contractCache.getCachedAnalysis(
       address,
       chainId
     );
 
     if (cachedAnalysis) {
-      console.log(
-        `✅ [ContractSource] Returning cached analysis for ${address}:${chainId}`
-      );
+      log.info("Returning cached analysis", { address, chainId });
       const normalized = normalizeUnifiedData(cachedAnalysis);
       if (!normalized) {
         // Bad cache entry; delete and treat as cache miss
         try {
           await contractCache.deleteCachedAnalysis(address, chainId);
-          console.warn(
-            `⚠️ [ContractSource] Deleted invalid cached analysis for ${address}:${chainId}`
-          );
+          log.warn("Deleted invalid cached analysis", { address, chainId });
         } catch {}
       } else {
         return NextResponse.json(
@@ -245,9 +244,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (!contractSource) {
-      console.log(
-        `🔍 [ContractSource] Contract not verified, trying risk analysis fallback`
-      );
+      log.info("Contract not verified, trying risk analysis fallback");
       // If contract source not found, try risk analysis as fallback
       try {
         const riskUrl = `${
@@ -255,17 +252,17 @@ export async function GET(request: NextRequest) {
         }/api/contract-analysis/risk?address=${encodeURIComponent(
           address
         )}&chainId=${chainId}`;
-        console.log(`🔍 [ContractSource] Calling risk API: ${riskUrl}`);
+        log.debug("Calling risk API", { riskUrl });
 
         const riskResponse = await fetch(riskUrl);
-        console.log(`🔍 [ContractSource] Risk API response:`, {
+        log.debug("Risk API response", {
           ok: riskResponse.ok,
           status: riskResponse.status,
         });
 
         if (riskResponse.ok) {
           const riskData = await riskResponse.json();
-          console.log(`✅ [ContractSource] Risk data received:`, {
+          log.info("Risk data received", {
             success: riskData.success,
             hasData: !!riskData.data,
             dataKeys: riskData.data ? Object.keys(riskData.data) : [],
@@ -275,9 +272,7 @@ export async function GET(request: NextRequest) {
           });
 
           if (riskData.success && riskData.data) {
-            console.log(
-              `✅ [ContractSource] Risk data received, transforming to unified format`
-            );
+            log.info("Transforming risk data to unified format");
             // Transform risk data to match RiskAnalysisResult interface
             const riskAnalysisResult: RiskAnalysisResult = {
               verified: false,
@@ -291,7 +286,7 @@ export async function GET(request: NextRequest) {
               aiOutput: riskData.data.aiOutput,
             };
             const unifiedData = transformToUnifiedFormat(riskAnalysisResult);
-            console.log(`✅ [ContractSource] Unified risk data:`, unifiedData);
+            log.info("Unified risk data prepared");
 
             // Cache the analysis result (check if upgradeable from risk data)
             const isUpgradeable = riskData.data.isUpgradeable || false;
@@ -303,10 +298,7 @@ export async function GET(request: NextRequest) {
                 isUpgradeable
               );
             } catch (cacheError) {
-              console.warn(
-                `⚠️ [ContractSource] Failed to cache risk analysis:`,
-                cacheError
-              );
+              log.warn("Failed to cache risk analysis", { error: cacheError });
             }
 
             return NextResponse.json(
@@ -319,10 +311,7 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (riskError) {
-        console.error(
-          `❌ [ContractSource] Risk analysis fallback failed:`,
-          riskError
-        );
+        log.error("Risk analysis fallback failed", { error: riskError });
       }
 
       return NextResponse.json(
@@ -334,18 +323,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(
-      `✅ [ContractSource] Contract verified, transforming to unified format`
-    );
+    log.info("Contract verified, transforming to unified format");
     const unifiedData = transformToUnifiedFormat(contractSource);
-    console.log(`✅ [ContractSource] Unified data:`, unifiedData);
+    log.info("Unified data prepared");
 
     // Add AI analysis for verified contracts
     let aiOutput = null;
     try {
-      console.log(
-        `🤖 [ContractSource] Calling 0G AI inference for verified contract`
-      );
+      log.info("Calling 0G AI inference for verified contract");
       // Type guard to ensure we have verified contract data
       if (contractSource.verified && "contractName" in contractSource) {
         const verifiedContract = contractSource as ContractSource; // Type assertion for verified contract
@@ -382,22 +367,22 @@ export async function GET(request: NextRequest) {
           const aiData = await aiResponse.json();
           if (aiData.success && aiData.data) {
             aiOutput = aiData.data;
-            console.log(
-              `✅ [ContractSource] AI inference successful for verified contract:`,
-              aiOutput
-            );
+            log.info("AI inference successful for verified contract", {
+              ai: aiOutput,
+            });
+          } else {
+            log.warn("AI inference returned non-success", {
+              status: aiResponse.status,
+            });
           }
+        } else {
+          log.warn("AI inference HTTP error", { status: aiResponse.status });
         }
       } else {
-        console.log(
-          "⚠️ [ContractSource] Contract is not verified, skipping AI inference"
-        );
+        log.warn("Contract is not verified, skipping AI inference");
       }
     } catch (aiError) {
-      console.warn(
-        `⚠️ [ContractSource] AI inference failed for verified contract (continuing without it):`,
-        aiError
-      );
+      log.warn("AI inference failed for verified contract", { error: aiError });
     }
 
     // Add AI output to unified data
@@ -409,7 +394,7 @@ export async function GET(request: NextRequest) {
     try {
       await contractCache.cacheAnalysis(address, chainId, unifiedData, false);
     } catch (cacheError) {
-      console.warn(`⚠️ [ContractSource] Failed to cache analysis:`, cacheError);
+      log.warn("Failed to cache analysis", { error: cacheError });
       // Continue without caching - not critical
     }
 
@@ -421,7 +406,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Contract source API error:", error);
+    log.error("Contract source API error", { error });
 
     return NextResponse.json(
       contractSourceResponseSchema.parse({

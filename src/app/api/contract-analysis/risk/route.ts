@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { genRequestId, logger } from "../../../../shared/lib/logger";
 import { z } from "zod";
 import { getChainById } from "../../../../shared/lib/chains";
 import { BytecodeAnalyzer } from "../../../../shared/lib/bytecodeAnalyzer";
@@ -65,6 +66,8 @@ function last20BytesToAddress(hex: string): string | null {
 // Removed - now using BytecodeAnalyzer directly
 
 export async function GET(req: NextRequest) {
+  const requestId = genRequestId();
+  const log = logger.with("risk", requestId);
   try {
     console.log(`🚀 [Risk API] Starting risk analysis`);
     const { searchParams } = new URL(req.url);
@@ -121,14 +124,12 @@ export async function GET(req: NextRequest) {
         { status: 200 }
       );
     }
-    console.log(`✅ [Risk API] Bytecode fetched: ${code.length / 2} bytes`);
+    log.info("Bytecode fetched", { bytes: code.length / 2 });
 
     // 2) Comprehensive bytecode analysis using new analyzer
-    console.log(
-      `🔍 [Risk API] Step 2: Running comprehensive bytecode analysis`
-    );
+    log.info("Running comprehensive bytecode analysis");
     const analysis = BytecodeAnalyzer.analyzeBytecode(addr, code);
-    console.log(`✅ [Risk API] Bytecode analysis complete:`, {
+    log.info("Bytecode analysis complete", {
       contractType: analysis.contractType,
       complexity: analysis.estimatedComplexity,
       functionCount: analysis.functionSelectors.length,
@@ -136,7 +137,7 @@ export async function GET(req: NextRequest) {
     });
 
     // 3) Additional proxy detection for upgradeable contracts
-    console.log(`🔍 [Risk API] Step 3: Checking for proxy patterns`);
+    log.info("Checking for proxy patterns");
     const implSlot = await rpcCall(rpcUrl, "eth_getStorageAt", [
       addr,
       EIP1967_IMPL_SLOT,
@@ -148,14 +149,14 @@ export async function GET(req: NextRequest) {
       analysis.functionSelectors
     );
 
-    console.log(`✅ [Risk API] Proxy detection:`, {
+    log.info("Proxy detection", {
       eip1967: implAddr,
       eip1167: looksLikeEIP1167(code),
       isUpgradeable: isUpgradeable,
     });
 
     // 4) Use analyzer's risk assessment
-    console.log(`🔍 [Risk API] Step 4: Using analyzer risk assessment`);
+    log.info("Using analyzer risk assessment");
     const risk = {
       severity:
         analysis.riskAssessment.severity === "critical"

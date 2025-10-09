@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { inferRiskOn0G } from "../../../../shared/lib/zeroG/infer";
+import { genRequestId, logger } from "../../../../shared/lib/logger";
 
 const inferRequestSchema = z.object({
   features: z.object({
@@ -42,6 +43,8 @@ const inferResponseSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const requestId = genRequestId();
+  const log = logger.with("infer", requestId);
   try {
     const body = await req.json();
     const parsed = inferRequestSchema.safeParse(body);
@@ -55,134 +58,95 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if this is a verified contract (has source code)
-    const isVerifiedContract =
-      parsed.data.features.sourceCode && parsed.data.features.contractName;
+    // Always use 0G inference with timeout for both verified and unverified
+    log.info("Starting 0G inference", {
+      hasSource: !!parsed.data.features.sourceCode,
+      hasSelectors: Array.isArray(parsed.data.features.selectors),
+    });
 
-    if (isVerifiedContract) {
-      // For verified contracts, provide a mock analysis based on source code
-      console.log(
-        `🤖 [Infer] Analyzing verified contract: ${parsed.data.features.contractName}`
+    try {
+      // Set a timeout for 0G inference
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("0G inference timeout")), 15000)
       );
 
-      const sourceCode = parsed.data.features.sourceCode || "";
-      const contractName = parsed.data.features.contractName || "";
+      const inferencePromise = inferRiskOn0G(parsed.data.features);
 
-      // Simple analysis based on source code patterns
-      let score = 50; // Base score
-      let reason = "Verified contract analysis";
+      const out = (await Promise.race([
+        inferencePromise,
+        timeoutPromise,
+      ])) as unknown;
+      // Normalize output to { score, reason }
+      const result = (() => {
+        if (out && typeof out === "object") {
+          const o = out as Record<string, unknown>;
+          const score = typeof o["score"] === "number" ? o["score"] : undefined;
+          const reason =
+            typeof o["reason"] === "string"
+              ? (o["reason"] as string)
+              : JSON.stringify(out);
+          if (typeof score === "number") return { score, reason };
+        }
+        return { score: 50, reason: "Inference returned unexpected shape" };
+      })();
+      log.info("0G inference success", { score: result.score });
+      return NextResponse.json(
+        inferResponseSchema.parse({ success: true, data: result }),
+        { status: 200 }
+      );
+    } catch (error) {
+      log.warn("0G inference failed or timed out", { error });
 
-      // Check for security patterns
-      if (sourceCode.includes("onlyOwner")) score += 10;
-      if (sourceCode.includes("whenNotPaused")) score += 10;
-      if (sourceCode.includes("require(")) score += 5;
-      if (sourceCode.includes("modifier")) score += 5;
-      if (sourceCode.includes("event")) score += 5;
+      // Fallback to heuristic analysis based on bytecode
+      const features = parsed.data.features;
+      const opcodeCounters = features.opcodeCounters || {};
+      const selectors = features.selectors || [];
 
-      // Check for potential issues
-      if (sourceCode.includes("selfdestruct")) score -= 20;
-      if (sourceCode.includes("delegatecall")) score -= 15;
-      if (sourceCode.includes("assembly")) score -= 10;
-      if (sourceCode.includes("unchecked")) score -= 5;
+      let score = 80; // Base score for unverified contracts (high risk)
+      let reason = "Unverified contract - source code not available";
 
-      // Ensure score is between 0-100
-      score = Math.max(0, Math.min(100, score));
-
-      // Generate reason based on score
-      if (score >= 80) {
-        reason = `High security contract with good practices. Contract "${contractName}" uses proper access controls and modifiers.`;
-      } else if (score >= 60) {
-        reason = `Moderate security contract. Contract "${contractName}" has some security measures but could be improved.`;
-      } else if (score >= 40) {
-        reason = `Low security contract. Contract "${contractName}" has basic security but needs significant improvements.`;
-      } else {
-        reason = `Poor security contract. Contract "${contractName}" has serious security issues that need immediate attention.`;
+      // Risk assessment based on dangerous opcodes (lower score = more dangerous)
+      if (opcodeCounters.DELEGATECALL > 0) {
+        score = Math.min(score, 20); // Very dangerous
+        reason += ". Contains DELEGATECALL - critical risk";
+      }
+      if (opcodeCounters.SELFDESTRUCT > 0) {
+        score = Math.min(score, 15); // Very dangerous
+        reason += ". Contains SELFDESTRUCT - critical risk";
+      }
+      if (opcodeCounters.CALLCODE > 0) {
+        score = Math.min(score, 30); // Dangerous
+        reason += ". Contains CALLCODE - high risk";
+      }
+      if (opcodeCounters.CREATE2 > 0) {
+        score = Math.min(score, 40); // Medium risk
+        reason += ". Contains CREATE2 - medium risk";
       }
 
-      const mockResult = {
-        score: score,
+      // Adjust based on function count (more functions = more complex = more risk)
+      if (selectors.length > 20) {
+        score = Math.min(score, score - 10);
+        reason += ". High function count - increased complexity";
+      }
+
+      // Ensure score is between 0-100 (0 = most dangerous, 100 = safest)
+      score = Math.max(0, Math.min(100, score));
+
+      const fallbackResult = {
+        score: Math.round(score),
         reason: reason,
       };
 
-      console.log(
-        `✅ [Infer] Mock analysis for verified contract:`,
-        mockResult
-      );
+      log.info("Fallback heuristic result", fallbackResult);
 
       return NextResponse.json(
-        inferResponseSchema.parse({ success: true, data: mockResult }),
+        inferResponseSchema.parse({ success: true, data: fallbackResult }),
         { status: 200 }
       );
-    } else {
-      // For unverified contracts, use 0G inference with timeout
-      console.log(`🤖 [Infer] Analyzing unverified contract with 0G AI`);
-
-      try {
-        // Set a timeout for 0G inference
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("0G inference timeout")), 15000)
-        );
-
-        const inferencePromise = inferRiskOn0G(parsed.data.features);
-
-        const out = await Promise.race([inferencePromise, timeoutPromise]);
-        return NextResponse.json(
-          inferResponseSchema.parse({ success: true, data: out }),
-          { status: 200 }
-        );
-      } catch (error) {
-        console.warn("0G inference failed or timed out:", error);
-
-        // Fallback to heuristic analysis based on bytecode
-        const features = parsed.data.features;
-        const opcodeCounters = features.opcodeCounters || {};
-        const selectors = features.selectors || [];
-
-        let score = 80; // Base score for unverified contracts (high risk)
-        let reason = "Unverified contract - source code not available";
-
-        // Risk assessment based on dangerous opcodes (lower score = more dangerous)
-        if (opcodeCounters.DELEGATECALL > 0) {
-          score = Math.min(score, 20); // Very dangerous
-          reason += ". Contains DELEGATECALL - critical risk";
-        }
-        if (opcodeCounters.SELFDESTRUCT > 0) {
-          score = Math.min(score, 15); // Very dangerous
-          reason += ". Contains SELFDESTRUCT - critical risk";
-        }
-        if (opcodeCounters.CALLCODE > 0) {
-          score = Math.min(score, 30); // Dangerous
-          reason += ". Contains CALLCODE - high risk";
-        }
-        if (opcodeCounters.CREATE2 > 0) {
-          score = Math.min(score, 40); // Medium risk
-          reason += ". Contains CREATE2 - medium risk";
-        }
-
-        // Adjust based on function count (more functions = more complex = more risk)
-        if (selectors.length > 20) {
-          score = Math.min(score, score - 10);
-          reason += ". High function count - increased complexity";
-        }
-
-        // Ensure score is between 0-100 (0 = most dangerous, 100 = safest)
-        score = Math.max(0, Math.min(100, score));
-
-        const fallbackResult = {
-          score: Math.round(score),
-          reason: reason,
-        };
-
-        console.log(`✅ [Infer] Fallback analysis result:`, fallbackResult);
-
-        return NextResponse.json(
-          inferResponseSchema.parse({ success: true, data: fallbackResult }),
-          { status: 200 }
-        );
-      }
     }
   } catch (error) {
-    console.error("/api/infer error", error);
+    const requestId = genRequestId();
+    logger.error("/api/infer error", { context: "infer", requestId, error });
     return NextResponse.json(
       inferResponseSchema.parse({
         success: false,
