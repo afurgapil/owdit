@@ -7,6 +7,7 @@ import { useContractSearch } from "../../features/contractSearch/hooks/useContra
 import { MatrixRain } from "../../shared/components/MatrixRain";
 import { useNetwork } from "../../shared/contexts/NetworkContext";
 import { Brain, Database } from "lucide-react";
+import { CommentsSection } from "../../features/community/components/CommentsSection";
 
 function AnalyzeContent() {
   const { selectedChain } = useNetwork();
@@ -544,6 +545,12 @@ function AnalyzeContent() {
                 </div>
               </div>
             </div>
+
+            {/* Community Comments */}
+            <CommentsSection
+              contractAddress={result.address}
+              chainId={result.chainId}
+            />
           </div>
         )}
       </div>
