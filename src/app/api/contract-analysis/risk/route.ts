@@ -3,6 +3,8 @@ import { genRequestId, logger } from "../../../../shared/lib/logger";
 import { z } from "zod";
 import { getChainById } from "../../../../shared/lib/chains";
 import { BytecodeAnalyzer } from "../../../../shared/lib/bytecodeAnalyzer";
+import { analyzeDeployerWallet } from "../../../../shared/lib/analyzers/deployerAnalysis";
+import { analyzeContractInteractions } from "../../../../shared/lib/analyzers/interactionAnalysis";
 
 // ---- Schemas ----
 const riskRequestSchema = z.object({
@@ -213,6 +215,57 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Add deployer analysis for unverified contracts
+    let deployerAnalysis = null;
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    if (etherscanApiKey) {
+      try {
+        console.log(`🔍 [Risk API] Starting deployer analysis for unverified contract`);
+        deployerAnalysis = await analyzeDeployerWallet(chainId, addr, etherscanApiKey);
+        if (deployerAnalysis) {
+          console.log(`✅ [Risk API] Deployer analysis completed:`, {
+            deployerAddress: deployerAnalysis.address,
+            reputationScore: deployerAnalysis.reputationScore,
+            riskLevel: deployerAnalysis.riskLevel,
+          });
+        }
+      } catch (deployerError) {
+        console.warn(`⚠️ [Risk API] Deployer analysis failed:`, deployerError);
+      }
+    }
+
+    // Add interaction analysis for unverified contracts
+    let interactionAnalysis = null;
+    if (etherscanApiKey) {
+      try {
+        console.log(`🔍 [Risk API] Starting interaction analysis for unverified contract`);
+        interactionAnalysis = await analyzeContractInteractions(chainId, addr, etherscanApiKey);
+        if (interactionAnalysis) {
+          console.log(`✅ [Risk API] Interaction analysis completed:`, {
+            totalTransactions: interactionAnalysis.totalTransactions,
+            uniqueUsers: interactionAnalysis.uniqueUsers,
+            activityLevel: interactionAnalysis.activityLevel,
+            riskLevel: interactionAnalysis.riskLevel,
+          });
+        }
+      } catch (interactionError) {
+        console.warn(`⚠️ [Risk API] Interaction analysis failed:`, interactionError);
+      }
+    }
+
+    // Calculate overall risk score for unverified contracts
+    let overallRiskScore = 0;
+    const bytecodeRisk = risk.severity === 'high' ? 80 : 
+                        risk.severity === 'medium' ? 60 :
+                        risk.severity === 'low' ? 40 : 20;
+    const deployerRisk = deployerAnalysis ? (100 - deployerAnalysis.reputationScore) : 50;
+    const interactionRisk = interactionAnalysis ? 
+      (interactionAnalysis.riskLevel === 'high' ? 80 : 
+       interactionAnalysis.riskLevel === 'medium' ? 60 : 40) : 50;
+    
+        // For unverified contracts: 60% bytecode, 25% deployer, 15% interaction
+        overallRiskScore = Math.round((bytecodeRisk * 0.6) + (deployerRisk * 0.25) + (interactionRisk * 0.15));
+
     console.log(`✅ [Risk API] Analysis complete, returning result`);
     const result = {
       success: true,
@@ -226,6 +279,10 @@ export async function GET(req: NextRequest) {
         opcodeCounters: analysis.opcodeCounters,
         risk,
         aiOutput, // Include AI analysis if available
+        deployerAnalysis, // Include deployer analysis if available
+        interactionAnalysis, // Include interaction analysis if available
+        overallRiskScore, // Include overall risk score
+        overallSafetyScore: Math.max(0, Math.min(100, 100 - overallRiskScore)),
       },
     };
 

@@ -1,6 +1,8 @@
-import { Clock, MessageCircle, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { Clock, MessageCircle, ChevronDown, ChevronUp, Copy, Check, Eye, User, Activity } from "lucide-react";
 import { formatTimestamp, shortenAddress } from "../../../shared/lib/utils";
 import { CommentsSection } from "../../community/components/CommentsSection";
+import { DeployerAnalysisCard } from "../../analysisResult/components/DeployerAnalysisCard";
+import { InteractionAnalysisCard } from "../../analysisResult/components/InteractionAnalysisCard";
 import { useState } from "react";
 
 interface HistoryItemProps {
@@ -8,17 +10,21 @@ interface HistoryItemProps {
     address: string;
     chainId: number;
     score: number;
-    level: "low" | "medium" | "high";
+    level: "low" | "medium" | "high" | "critical";
     timestamp: string;
     contractName?: string;
     compilerVersion?: string;
     status: string;
     findings: unknown[];
+    overallRiskScore?: number;
+    deployerAnalysis?: any;
+    interactionAnalysis?: any;
   };
 }
 
 export function HistoryItem({ item }: HistoryItemProps) {
   const [showComments, setShowComments] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
 
@@ -41,6 +47,8 @@ export function HistoryItem({ item }: HistoryItemProps) {
         return "bg-orange-500/20 text-orange-400 border-orange-500/30";
       case "high":
         return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "critical":
+        return "bg-red-600/20 text-red-300 border-red-600/30";
       default:
         return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
@@ -111,26 +119,132 @@ export function HistoryItem({ item }: HistoryItemProps) {
           </div>
         </div>
 
-        {/* Comments Toggle Button */}
+        {/* Action Buttons */}
         <div className="mt-4 pt-4 border-t border-gray-600">
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-2 text-gray-400 hover:text-neon-blue transition-colors duration-200"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {showComments ? "Hide Comments" : "View Comments"}
-            </span>
-            {commentsLoading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-neon-blue border-t-transparent"></div>
-            ) : showComments ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
+          <div className="flex flex-wrap gap-4">
+            {/* Detailed Analysis Button */}
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="flex items-center gap-2 text-gray-400 hover:text-neon-purple transition-colors duration-200"
+            >
+              <Eye className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                {showDetails ? "Hide Details" : "View Details"}
+              </span>
+              {showDetails ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Comments Toggle Button */}
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className="flex items-center gap-2 text-gray-400 hover:text-neon-blue transition-colors duration-200"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                {showComments ? "Hide Comments" : "View Comments"}
+              </span>
+              {commentsLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-neon-blue border-t-transparent"></div>
+              ) : showComments ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Detailed Analysis Section */}
+      {showDetails && (
+        <div className="border-t border-gray-600 bg-gray-900/20">
+          <div className="p-6 space-y-6">
+            {/* Overall Risk Score */}
+            {item.overallRiskScore && (
+              <div className="glass-card p-6 rounded-2xl border border-neon-blue/30">
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold text-white mb-4 neon-text neon-blue">
+                    Overall Risk Assessment
+                  </h3>
+                  <div className="flex items-center justify-center mb-4">
+                    <div
+                      className={`w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black border-4 ${
+                        item.overallRiskScore >= 80
+                          ? "bg-neon-green/20 border-neon-green/40 text-neon-green"
+                          : item.overallRiskScore >= 60
+                          ? "bg-neon-orange/20 border-neon-orange/40 text-neon-orange"
+                          : item.overallRiskScore >= 40
+                          ? "bg-neon-pink/20 border-neon-pink/40 text-neon-pink"
+                          : "bg-red-500/20 border-red-500/40 text-red-400"
+                      } glow-owl`}
+                    >
+                      {item.overallRiskScore}
+                    </div>
+                  </div>
+                  <p className="text-lg text-gray-300">
+                    Combined risk score based on bytecode, deployer, and interaction analysis
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Deployer Analysis */}
+            {item.deployerAnalysis && (
+              <DeployerAnalysisCard 
+                deployerAnalysis={item.deployerAnalysis} 
+                className="mb-6"
+              />
+            )}
+
+            {/* Interaction Analysis */}
+            {item.interactionAnalysis && (
+              <InteractionAnalysisCard 
+                interactionAnalysis={item.interactionAnalysis} 
+                className="mb-6"
+              />
+            )}
+
+            {/* Basic Contract Info */}
+            <div className="glass-card p-6 rounded-2xl border border-neon-blue/30">
+              <h3 className="text-xl font-bold text-white mb-4 neon-text neon-cyan">
+                Contract Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-300">Address:</span>
+                  <div className="font-mono text-sm text-white break-all">
+                    {item.address}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-300">Chain ID:</span>
+                  <div className="text-white">{item.chainId}</div>
+                </div>
+                {item.contractName && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-300">Contract Name:</span>
+                    <div className="text-white">{item.contractName}</div>
+                  </div>
+                )}
+                {item.compilerVersion && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-300">Compiler Version:</span>
+                    <div className="text-white">{item.compilerVersion}</div>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm font-medium text-gray-300">Analysis Date:</span>
+                  <div className="text-white">{formatTimestamp(item.timestamp)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Comments Section */}
       {showComments && (

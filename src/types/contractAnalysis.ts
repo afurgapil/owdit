@@ -3,6 +3,36 @@ import {
   RiskAnalysisResult,
 } from "../shared/lib/fetchers/contractSource";
 
+// Deployer wallet analysis interface
+export interface DeployerAnalysis {
+  address: string;
+  reputationScore: number; // 0-100
+  contractCount: number;
+  successRate: number; // 0-1
+  timeSinceFirstDeploy: number; // days
+  riskIndicators: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+  firstDeployDate?: string; // ISO date
+  lastDeployDate?: string; // ISO date
+  totalVolumeDeployed?: number; // ETH
+  averageContractSize?: number; // ETH
+}
+
+// Contract interaction analysis interface
+export interface InteractionAnalysis {
+  totalTransactions: number;
+  uniqueUsers: number;
+  activityLevel: 'low' | 'medium' | 'high';
+  transactionVolume: number; // ETH
+  averageTxPerDay: number;
+  lastActivity: string; // ISO date
+  riskIndicators: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+  firstTransactionDate?: string; // ISO date
+  peakActivityPeriod?: string; // Time period with highest activity
+  userRetentionRate?: number; // 0-1
+}
+
 // Unified contract analysis interface
 export interface UnifiedContractAnalysis {
   // Common fields
@@ -37,6 +67,11 @@ export interface UnifiedContractAnalysis {
     score: number;
     reason: string;
   };
+
+  // Enhanced analysis (new features)
+  deployerAnalysis?: DeployerAnalysis;
+  interactionAnalysis?: InteractionAnalysis;
+  overallRiskScore?: number; // Combined risk score (0-100)
 
   // Metadata
   analysisType: "verified" | "unverified";
@@ -120,4 +155,21 @@ export function isUnverifiedContract(
   bytecodeAnalysis: NonNullable<UnifiedContractAnalysis["bytecodeAnalysis"]>;
 } {
   return !data.verified && data.analysisType === "unverified";
+}
+
+// Analysis Progress Types
+export interface AnalysisProgress {
+  step: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  message: string;
+  progress: number; // 0-100
+  timestamp: string;
+}
+
+export interface AnalysisMilestone {
+  id: string;
+  title: string;
+  description: string;
+  estimatedDuration: number; // seconds
+  dependencies?: string[]; // milestone IDs that must complete first
 }

@@ -6,8 +6,10 @@ import { AddressInput } from "../../features/contractSearch/components/AddressIn
 import { useContractSearch } from "../../features/contractSearch/hooks/useContractSearch";
 import { MatrixRain } from "../../shared/components/MatrixRain";
 import { useNetwork } from "../../shared/contexts/NetworkContext";
-import { Brain, Database } from "lucide-react";
+import { Brain, Database, CheckCircle, Loader2 } from "lucide-react";
 import { CommentsSection } from "../../features/community/components/CommentsSection";
+import { DeployerAnalysisCard } from "../../features/analysisResult/components/DeployerAnalysisCard";
+import { InteractionAnalysisCard } from "../../features/analysisResult/components/InteractionAnalysisCard";
 
 function AnalyzeContent() {
   const { selectedChain } = useNetwork();
@@ -27,6 +29,28 @@ function AnalyzeContent() {
   const [selectedDemoContract, setSelectedDemoContract] = useState<
     string | null
   >(null);
+
+  // Lightweight sequential stepper for the loading modal (UI only)
+  const loadingSteps = [
+    "Fetch Source / Bytecode",
+    "AI Security Analysis",
+    "Deployer Wallet Analysis",
+    "Interaction Analysis",
+    "Final Risk Calculation",
+  ];
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  useEffect(() => {
+    if (!isLoading) {
+      setCurrentStepIndex(0);
+      return;
+    }
+    // Reveal one step every ~1.2s to avoid showing all at once
+    const interval = setInterval(() => {
+      setCurrentStepIndex((idx) => (idx < loadingSteps.length - 1 ? idx + 1 : idx));
+    }, 1200);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
   // Set address from URL parameter if available
   useEffect(() => {
@@ -56,6 +80,30 @@ function AnalyzeContent() {
       <MatrixRain gridSize={24} minDurationSec={15} maxDurationSec={25} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-8 sm:py-12 lg:py-16">
+
+        {/* Progress Modal (sequential UI) */}
+        {isLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/70" />
+            <div className="relative z-10 w-full max-w-xl mx-auto glass-card rounded-2xl border border-neon-blue/30 p-6">
+              <h3 className="text-xl font-bold text-white mb-1">Analyzing Contract</h3>
+              <p className="text-gray-300 mb-4">Please wait while we process the analysis steps.</p>
+              <div className="space-y-3">
+                {loadingSteps.slice(0, currentStepIndex + 1).map((label, idx) => (
+                  <div key={label} className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 border border-gray-700/50">
+                    <span className="text-gray-200">{label}</span>
+                    {idx < currentStepIndex ? (
+                      <CheckCircle className="h-5 w-5 text-neon-green" />
+                    ) : (
+                      <Loader2 className={`h-4 w-4 ${idx === 0 ? "text-neon-blue" : idx === 1 ? "text-neon-purple" : idx === 2 ? "text-neon-green" : idx === 3 ? "text-neon-pink" : "text-cyan-300"} animate-spin`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-sm text-gray-400">This can take up to ~120 seconds due to AI inference.</div>
+            </div>
+          </div>
+        )}
         {/* Header */}
 
         {/* Demo Contracts Section */}
@@ -205,6 +253,16 @@ function AnalyzeContent() {
         {/* Results */}
         {result && (
           <div className="space-y-8">
+            {/* Safe type extraction for optional fields */}
+            {(() => {
+              const contractName = "contractName" in result ? (result as { contractName?: string }).contractName : undefined;
+              const compilerVersion = "compilerVersion" in result ? (result as { compilerVersion?: string }).compilerVersion : undefined;
+              const overallRiskScore = "overallRiskScore" in result ? (result as { overallRiskScore?: number }).overallRiskScore : undefined;
+              const deployerAnalysis = "deployerAnalysis" in result ? (result as { deployerAnalysis?: any }).deployerAnalysis : undefined;
+              const interactionAnalysis = "interactionAnalysis" in result ? (result as { interactionAnalysis?: any }).interactionAnalysis : undefined;
+              
+              return null; // This is just for type extraction, actual rendering happens below
+            })()}
             {/* Analysis Complete Message */}
             <div className="text-center">
               <div className="inline-flex items-center px-6 py-3 bg-neon-green/20 border border-neon-green rounded-full text-neon-green font-bold text-lg">
@@ -246,26 +304,24 @@ function AnalyzeContent() {
                         {result.verified ? "Verified" : "Unverified"}
                       </span>
                     </div>
-                    {result.verified &&
-                      "contractName" in result &&
-                      result.contractName && (
+                    {(() => {
+                      const contractName = "contractName" in result ? (result as { contractName?: string }).contractName : undefined;
+                      return result.verified && contractName ? (
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="font-bold">Name:</span>
-                          <span className="break-all">
-                            {result.contractName}
-                          </span>
+                          <span className="break-all">{contractName}</span>
                         </div>
-                      )}
-                    {result.verified &&
-                      "compilerVersion" in result &&
-                      result.compilerVersion && (
+                      ) : null;
+                    })()}
+                    {(() => {
+                      const compilerVersion = "compilerVersion" in result ? (result as { compilerVersion?: string }).compilerVersion : undefined;
+                      return result.verified && compilerVersion ? (
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="font-bold">Compiler:</span>
-                          <span className="break-all">
-                            {result.compilerVersion}
-                          </span>
+                          <span className="break-all">{compilerVersion}</span>
                         </div>
-                      )}
+                      ) : null;
+                    })()}
                   </div>
                 </div>
                 <div>
@@ -545,6 +601,59 @@ function AnalyzeContent() {
                 </div>
               </div>
             </div>
+
+            {/* Enhanced Analysis Cards */}
+            {(() => {
+              const deployerAnalysis = "deployerAnalysis" in result ? (result as { deployerAnalysis?: any }).deployerAnalysis : undefined;
+              return deployerAnalysis ? (
+                <DeployerAnalysisCard 
+                  deployerAnalysis={deployerAnalysis} 
+                  className="mb-6"
+                />
+              ) : null;
+            })()}
+
+            {(() => {
+              const interactionAnalysis = "interactionAnalysis" in result ? (result as { interactionAnalysis?: any }).interactionAnalysis : undefined;
+              return interactionAnalysis ? (
+                <InteractionAnalysisCard 
+                  interactionAnalysis={interactionAnalysis} 
+                  className="mb-6"
+                />
+              ) : null;
+            })()}
+
+            {/* Overall Risk Score */}
+            {(() => {
+              const overallRiskScore = "overallRiskScore" in result ? (result as { overallRiskScore?: number }).overallRiskScore : undefined;
+              return typeof overallRiskScore === "number" ? (
+                <div className="glass-card p-6 rounded-2xl border border-neon-blue/30 mb-6">
+                  <div className="text-center">
+                    <h3 className="text-2xl font-bold text-white mb-4 neon-text neon-blue">
+                      Overall Safety Assessment
+                    </h3>
+                    <div className="flex items-center justify-center mb-4">
+                      <div
+                        className={`w-32 h-32 rounded-full flex items-center justify-center text-4xl font-black border-4 ${
+                          (100 - overallRiskScore) >= 80
+                            ? "bg-neon-green/20 border-neon-green/40 text-neon-green"
+                            : (100 - overallRiskScore) >= 60
+                            ? "bg-neon-blue/20 border-neon-blue/40 text-neon-blue"
+                            : (100 - overallRiskScore) >= 40
+                            ? "bg-neon-purple/20 border-neon-purple/40 text-neon-purple"
+                            : "bg-red-500/20 border-red-500/40 text-red-400"
+                        } glow-owl`}
+                      >
+                        {Math.max(0, Math.min(100, 100 - overallRiskScore))}
+                      </div>
+                    </div>
+                    <p className="text-lg text-gray-300">
+                      Combined safety score (higher is safer)
+                    </p>
+                  </div>
+                </div>
+              ) : null;
+            })()}
 
             {/* Community Comments */}
             <CommentsSection

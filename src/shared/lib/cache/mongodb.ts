@@ -18,6 +18,8 @@ interface CachedAnalysis {
   updatedAt: Date;
   isUpgradeable: boolean;
   ttl?: Date; // Time to live for cache expiration
+  overallRiskScore?: number; // Combined risk score for quick access
+  overallSafetyScore?: number; // Combined safety score (100 - risk)
 }
 
 // Cache service class
@@ -184,6 +186,13 @@ export class ContractCacheService {
         updatedAt: new Date(),
         isUpgradeable: false,
         ttl,
+        overallRiskScore: analysis.overallRiskScore, // quick access
+        overallSafetyScore:
+          (analysis as any).overallSafetyScore !== undefined
+            ? (analysis as any).overallSafetyScore
+            : analysis.overallRiskScore !== undefined
+            ? Math.max(0, Math.min(100, 100 - (analysis.overallRiskScore as number)))
+            : undefined,
       };
 
       await this.connection!.collection.replaceOne(
@@ -323,26 +332,39 @@ export class ContractCacheService {
       // Transform results to history format
       const history = results.map((cached) => {
         const analysis = cached.analysis;
-        const score = analysis.aiOutput?.score ?? 50;
+        // Use overall risk score if available, otherwise fall back to AI score
+        // Use safety score for history display; fallback compute from risk or AI
+        const safety =
+          cached.overallSafetyScore !== undefined
+            ? cached.overallSafetyScore
+            : cached.overallRiskScore !== undefined
+            ? Math.max(0, Math.min(100, 100 - cached.overallRiskScore))
+            : analysis.aiOutput?.score !== undefined
+            ? (typeof analysis.aiOutput.score === 'number' ? analysis.aiOutput.score : 50)
+            : 50;
         const level =
-          score >= 80
+          safety >= 80
             ? "low"
-            : score >= 60
+            : safety >= 60
             ? "medium"
-            : score >= 40
+            : safety >= 40
             ? "high"
-            : "high";
+            : "critical";
 
         return {
           address: analysis.address,
           chainId: analysis.chainId,
-          score,
+          score: safety,
           level,
           timestamp: analysis.timestamp,
           contractName: analysis.contractInfo.name,
           compilerVersion: analysis.contractInfo.compilerVersion,
           status: "completed",
           findings: [],
+          overallRiskScore: cached.overallRiskScore, // Include overall risk score
+          overallSafetyScore: cached.overallSafetyScore,
+          deployerAnalysis: analysis.deployerAnalysis, // Include deployer analysis
+          interactionAnalysis: analysis.interactionAnalysis, // Include interaction analysis
         };
       });
 

@@ -35,7 +35,10 @@ const inferResponseSchema = z.object({
   success: z.boolean(),
   data: z
     .object({
+      // score now represents SAFETY (0 = riskiest, 100 = safest)
       score: z.number(),
+      // for debugging/backward-compat you may inspect riskScore if present
+      riskScore: z.number().optional(),
       reason: z.string(),
     })
     .optional(),
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
     try {
       // Set a timeout for 0G inference
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("0G inference timeout")), 15000)
+        setTimeout(() => reject(new Error("0G inference timeout")), 120000)
       );
 
       const inferencePromise = inferRiskOn0G(parsed.data.features);
@@ -80,16 +83,19 @@ export async function POST(req: NextRequest) {
       const result = (() => {
         if (out && typeof out === "object") {
           const o = out as Record<string, unknown>;
-          const score = typeof o["score"] === "number" ? o["score"] : undefined;
+          const modelRisk = typeof o["score"] === "number" ? (o["score"] as number) : undefined;
           const reason =
             typeof o["reason"] === "string"
               ? (o["reason"] as string)
               : JSON.stringify(out);
-          if (typeof score === "number") return { score, reason };
+          if (typeof modelRisk === "number") {
+            const safety = Math.max(0, Math.min(100, 100 - modelRisk));
+            return { score: safety, riskScore: modelRisk, reason };
+          }
         }
-        return { score: 50, reason: "Inference returned unexpected shape" };
+        return { score: 50, riskScore: 50, reason: "Inference returned unexpected shape" };
       })();
-      log.info("0G inference success", { score: result.score });
+      log.info("0G inference success", { safetyScore: result.score, riskScore: result.riskScore });
       return NextResponse.json(
         inferResponseSchema.parse({ success: true, data: result }),
         { status: 200 }
@@ -101,39 +107,53 @@ export async function POST(req: NextRequest) {
       const features = parsed.data.features;
       const opcodeCounters = features.opcodeCounters || {};
       const selectors = features.selectors || [];
+      const hasSource = !!features.sourceCode;
+      const isVerified = hasSource && features.contractName; // Check if it's a verified contract
 
-      let score = 80; // Base score for unverified contracts (high risk)
+      // Build risk first then convert to safety at the end
+      let risk = 80; // Base risk for unverified contracts (high risk)
       let reason = "Unverified contract - source code not available";
 
-      // Risk assessment based on dangerous opcodes (lower score = more dangerous)
-      if (opcodeCounters.DELEGATECALL > 0) {
-        score = Math.min(score, 20); // Very dangerous
-        reason += ". Contains DELEGATECALL - critical risk";
-      }
-      if (opcodeCounters.SELFDESTRUCT > 0) {
-        score = Math.min(score, 15); // Very dangerous
-        reason += ". Contains SELFDESTRUCT - critical risk";
-      }
-      if (opcodeCounters.CALLCODE > 0) {
-        score = Math.min(score, 30); // Dangerous
-        reason += ". Contains CALLCODE - high risk";
-      }
-      if (opcodeCounters.CREATE2 > 0) {
-        score = Math.min(score, 40); // Medium risk
-        reason += ". Contains CREATE2 - medium risk";
+      // Handle verified contracts differently
+      if (isVerified) {
+        risk = 15; // Very low risk for verified contracts
+        reason = `Verified contract "${features.contractName}" with source code available. Compiler: ${features.compilerVersion || 'Unknown'}`;
+      } else if (hasSource) {
+        risk = 25; // Low risk for contracts with source but not fully verified
+        reason = "Contract with source code available but not fully verified";
       }
 
-      // Adjust based on function count (more functions = more complex = more risk)
-      if (selectors.length > 20) {
-        score = Math.min(score, score - 10);
-        reason += ". High function count - increased complexity";
+      // Risk assessment based on dangerous opcodes (only for unverified contracts)
+      if (!isVerified) {
+        if (opcodeCounters.DELEGATECALL > 0) {
+          risk = Math.max(risk, 85); // critical risk
+          reason += ". Contains DELEGATECALL - critical risk";
+        }
+        if (opcodeCounters.SELFDESTRUCT > 0) {
+          risk = Math.max(risk, 90);
+          reason += ". Contains SELFDESTRUCT - critical risk";
+        }
+        if (opcodeCounters.CALLCODE > 0) {
+          risk = Math.max(risk, 75);
+          reason += ". Contains CALLCODE - high risk";
+        }
+        if (opcodeCounters.CREATE2 > 0) {
+          risk = Math.max(risk, 60);
+          reason += ". Contains CREATE2 - medium risk";
+        }
+
+        if (selectors.length > 20) {
+          risk = Math.max(risk, 60);
+          reason += ". High function count - increased complexity";
+        }
       }
 
-      // Ensure score is between 0-100 (0 = most dangerous, 100 = safest)
-      score = Math.max(0, Math.min(100, score));
+      risk = Math.max(0, Math.min(100, risk));
+      const safety = Math.max(0, Math.min(100, 100 - risk));
 
       const fallbackResult = {
-        score: Math.round(score),
+        score: Math.round(safety),
+        riskScore: Math.round(risk),
         reason: reason,
       };
 

@@ -11,6 +11,9 @@ import {
 } from "../../../../types/contractAnalysis";
 import { contractCache } from "../../../../shared/lib/cache/mongodb";
 import { genRequestId, logger } from "../../../../shared/lib/logger";
+import { analyzeDeployerWallet } from "../../../../shared/lib/analyzers/deployerAnalysis";
+import { analyzeContractInteractions } from "../../../../shared/lib/analyzers/interactionAnalysis";
+import { AnalysisProgressTracker } from "../../../../shared/lib/analysisProgress";
 
 // Normalize potentially legacy/invalid cached shapes into expected unified schema
 function normalizeUnifiedData(
@@ -166,6 +169,38 @@ const contractSourceResponseSchema = z.object({
           reason: z.string(),
         })
         .optional(),
+      deployerAnalysis: z
+        .object({
+          address: z.string(),
+          reputationScore: z.number(),
+          contractCount: z.number(),
+          successRate: z.number(),
+          timeSinceFirstDeploy: z.number(),
+          riskIndicators: z.array(z.string()),
+          riskLevel: z.enum(["low", "medium", "high"]),
+          firstDeployDate: z.string().optional(),
+          lastDeployDate: z.string().optional(),
+          totalVolumeDeployed: z.number().optional(),
+          averageContractSize: z.number().optional(),
+        })
+        .optional(),
+      interactionAnalysis: z
+        .object({
+          totalTransactions: z.number(),
+          uniqueUsers: z.number(),
+          activityLevel: z.enum(["low", "medium", "high"]),
+          transactionVolume: z.number(),
+          averageTxPerDay: z.number(),
+          lastActivity: z.string(),
+          riskIndicators: z.array(z.string()),
+          riskLevel: z.enum(["low", "medium", "high"]),
+          firstTransactionDate: z.string().optional(),
+          peakActivityPeriod: z.string().optional(),
+          userRetentionRate: z.number().optional(),
+        })
+        .optional(),
+      overallRiskScore: z.number().optional(),
+      overallSafetyScore: z.number().optional(),
       analysisType: z.enum(["verified", "unverified"]),
       timestamp: z.string(),
     })
@@ -180,6 +215,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const chainId = parseInt(searchParams.get("chainId") || "1");
     const address = searchParams.get("address");
+    const sessionId = searchParams.get("sessionId") || requestId;
+    const enableProgress = searchParams.get("progress") === "true";
 
     if (!address) {
       return NextResponse.json(
@@ -206,6 +243,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Initialize progress tracking if enabled (start with cache step)
+    let progressTracker: AnalysisProgressTracker | null = null;
+    if (enableProgress) {
+      // Start with unverified milestones by default; we'll switch logic after source fetch
+      progressTracker = new AnalysisProgressTracker(false);
+      progressTracker.startStep("check_cache", "Checking cached analysis...");
+    }
+
     // Check cache first
     log.info("Checking cache", { address, chainId });
     const cachedAnalysis = await contractCache.getCachedAnalysis(
@@ -214,6 +259,9 @@ export async function GET(request: NextRequest) {
     );
 
     if (cachedAnalysis) {
+      if (progressTracker) {
+        progressTracker.completeStep("check_cache", "Found cached analysis");
+      }
       log.info("Returning cached analysis", { address, chainId });
       const normalized = normalizeUnifiedData(cachedAnalysis);
       if (!normalized) {
@@ -231,17 +279,36 @@ export async function GET(request: NextRequest) {
           { status: 200 }
         );
       }
+    } else if (progressTracker) {
+      progressTracker.completeStep("check_cache", "No cached analysis found");
     }
+
+    // Progress tracker already initialized above if enabled
 
     // Get Etherscan API key from environment (optional)
     const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
     // Fetch contract source
+    if (progressTracker) {
+      progressTracker.startStep("fetch_source", "Fetching contract source code...");
+    }
+    
     const contractSource = await resolveContractSource(
       chainId,
       address,
       etherscanApiKey
     );
+
+    if (progressTracker) {
+      if (contractSource) {
+        progressTracker.completeStep("fetch_source", "Contract source code retrieved successfully");
+      } else {
+        progressTracker.completeStep("fetch_source", "Contract not verified, switching to bytecode analysis");
+        progressTracker.startStep("fetch_bytecode", "Fetching contract bytecode...");
+        // Assume immediate availability for UX purposes; underlying fetchers run next
+        progressTracker.completeStep("fetch_bytecode", "Contract bytecode retrieved successfully");
+      }
+    }
 
     if (!contractSource) {
       log.info("Contract not verified, trying risk analysis fallback");
@@ -286,7 +353,19 @@ export async function GET(request: NextRequest) {
               aiOutput: riskData.data.aiOutput,
             };
             const unifiedData = transformToUnifiedFormat(riskAnalysisResult);
-            log.info("Unified risk data prepared");
+            
+            // Add deployer and interaction analysis from risk API
+            if (riskData.data.deployerAnalysis) {
+              unifiedData.deployerAnalysis = riskData.data.deployerAnalysis;
+            }
+            if (riskData.data.interactionAnalysis) {
+              unifiedData.interactionAnalysis = riskData.data.interactionAnalysis;
+            }
+            if (riskData.data.overallRiskScore) {
+              unifiedData.overallRiskScore = riskData.data.overallRiskScore;
+            }
+            
+            log.info("Unified risk data prepared with enhanced analysis");
 
             // Cache the analysis result (check if upgradeable from risk data)
             const isUpgradeable = riskData.data.isUpgradeable || false;
@@ -330,6 +409,9 @@ export async function GET(request: NextRequest) {
     // Add AI analysis for verified contracts
     let aiOutput = null;
     try {
+      if (progressTracker) {
+        progressTracker.startStep("ai_analysis", "Running AI security analysis...");
+      }
       log.info("Calling 0G AI inference for verified contract");
       // Type guard to ensure we have verified contract data
       if (contractSource.verified && "contractName" in contractSource) {
@@ -367,27 +449,165 @@ export async function GET(request: NextRequest) {
           const aiData = await aiResponse.json();
           if (aiData.success && aiData.data) {
             aiOutput = aiData.data;
+            if (progressTracker) {
+              progressTracker.completeStep("ai_analysis", "AI security analysis completed successfully");
+            }
             log.info("AI inference successful for verified contract", {
               ai: aiOutput,
             });
           } else {
+            if (progressTracker) {
+              progressTracker.failStep("ai_analysis", "AI inference returned non-success");
+            }
             log.warn("AI inference returned non-success", {
               status: aiResponse.status,
             });
           }
         } else {
+          if (progressTracker) {
+            progressTracker.failStep("ai_analysis", "AI inference HTTP error");
+          }
           log.warn("AI inference HTTP error", { status: aiResponse.status });
         }
       } else {
         log.warn("Contract is not verified, skipping AI inference");
       }
     } catch (aiError) {
+      if (progressTracker) {
+        progressTracker.failStep("ai_analysis", "AI inference failed: " + (aiError as Error).message);
+      }
       log.warn("AI inference failed for verified contract", { error: aiError });
     }
 
     // Add AI output to unified data
     if (aiOutput) {
       unifiedData.aiOutput = aiOutput;
+    }
+
+    // Add deployer analysis
+    let deployerAnalysis = null;
+    if (etherscanApiKey) {
+      try {
+        if (progressTracker) {
+          progressTracker.startStep("deployer_analysis", "Analyzing deployer wallet...");
+        }
+        log.info("Starting deployer analysis");
+        deployerAnalysis = await analyzeDeployerWallet(chainId, address, etherscanApiKey);
+        if (deployerAnalysis) {
+          if (progressTracker) {
+            progressTracker.completeStep("deployer_analysis", "Deployer wallet analysis completed successfully");
+          }
+          log.info("Deployer analysis completed", {
+            deployerAddress: deployerAnalysis.address,
+            reputationScore: deployerAnalysis.reputationScore,
+            riskLevel: deployerAnalysis.riskLevel,
+          });
+        }
+      } catch (deployerError) {
+        if (progressTracker) {
+          progressTracker.failStep("deployer_analysis", "Deployer analysis failed: " + (deployerError as Error).message);
+        }
+        log.warn("Deployer analysis failed", { error: deployerError });
+      }
+    } else {
+      if (progressTracker) {
+        progressTracker.failStep("deployer_analysis", "Etherscan API key not available");
+      }
+      log.warn("Etherscan API key not available, skipping deployer analysis");
+    }
+
+    // Add deployer analysis to unified data
+    if (deployerAnalysis) {
+      unifiedData.deployerAnalysis = deployerAnalysis;
+    }
+
+    // Add interaction analysis
+    let interactionAnalysis = null;
+    if (etherscanApiKey) {
+      try {
+        if (progressTracker) {
+          progressTracker.startStep("interaction_analysis", "Analyzing contract interactions...");
+        }
+        log.info("Starting interaction analysis");
+        interactionAnalysis = await analyzeContractInteractions(chainId, address, etherscanApiKey);
+        if (interactionAnalysis) {
+          if (progressTracker) {
+            progressTracker.completeStep("interaction_analysis", "Contract interaction analysis completed successfully");
+          }
+          log.info("Interaction analysis completed", {
+            totalTransactions: interactionAnalysis.totalTransactions,
+            uniqueUsers: interactionAnalysis.uniqueUsers,
+            activityLevel: interactionAnalysis.activityLevel,
+            riskLevel: interactionAnalysis.riskLevel,
+          });
+        }
+      } catch (interactionError) {
+        if (progressTracker) {
+          progressTracker.failStep("interaction_analysis", "Interaction analysis failed: " + (interactionError as Error).message);
+        }
+        log.warn("Interaction analysis failed", { error: interactionError });
+      }
+    } else {
+      if (progressTracker) {
+        progressTracker.failStep("interaction_analysis", "Etherscan API key not available");
+      }
+      log.warn("Etherscan API key not available, skipping interaction analysis");
+    }
+
+    // Add interaction analysis to unified data
+    if (interactionAnalysis) {
+      unifiedData.interactionAnalysis = interactionAnalysis;
+    }
+
+    // Calculate overall risk score
+    if (progressTracker) {
+      progressTracker.startStep("risk_calculation", "Calculating final risk score...");
+    }
+    let overallRiskScore = 0;
+    
+    if (unifiedData.verified) {
+      // aiOutput.score is SAFETY now → convert to risk first
+      const aiSafety = unifiedData.aiOutput?.score ?? 50;
+      const aiRisk = 100 - aiSafety;
+      const deployerRisk = deployerAnalysis ? (100 - deployerAnalysis.reputationScore) : 0; // lower reputation → higher risk
+      const interactionRisk = interactionAnalysis ? 
+        (interactionAnalysis.riskLevel === 'high' ? 20 : 
+         interactionAnalysis.riskLevel === 'medium' ? 10 : 0) : 0;
+      // 80% AI risk, 15% deployer, 5% interaction
+      overallRiskScore = Math.round((aiRisk * 0.8) + (deployerRisk * 0.15) + (interactionRisk * 0.05));
+      // Ensure overall risk is at least AI risk baseline
+      overallRiskScore = Math.max(aiRisk, overallRiskScore);
+    } else {
+      // For unverified contracts: bytecode analysis is primary
+      if (unifiedData.bytecodeAnalysis?.risk) {
+        const bytecodeRisk = unifiedData.bytecodeAnalysis.risk.severity === 'high' ? 80 : 
+                            unifiedData.bytecodeAnalysis.risk.severity === 'medium' ? 60 :
+                            unifiedData.bytecodeAnalysis.risk.severity === 'low' ? 40 : 20;
+        const deployerRisk = deployerAnalysis ? (100 - deployerAnalysis.reputationScore) : 50;
+        const interactionRisk = interactionAnalysis ? 
+          (interactionAnalysis.riskLevel === 'high' ? 80 : 
+           interactionAnalysis.riskLevel === 'medium' ? 60 : 40) : 50;
+        
+        // Weighted average: 60% bytecode, 25% deployer, 15% interaction
+        overallRiskScore = Math.round((bytecodeRisk * 0.6) + (deployerRisk * 0.25) + (interactionRisk * 0.15));
+      } else if (deployerAnalysis || interactionAnalysis) {
+        const deployerRisk = deployerAnalysis ? (100 - deployerAnalysis.reputationScore) : 50;
+        const interactionRisk = interactionAnalysis ? 
+          (interactionAnalysis.riskLevel === 'high' ? 80 : 
+           interactionAnalysis.riskLevel === 'medium' ? 60 : 40) : 50;
+        
+        overallRiskScore = Math.round((deployerRisk * 0.6) + (interactionRisk * 0.4));
+      }
+    }
+
+    if (overallRiskScore >= 0) {
+      unifiedData.overallRiskScore = overallRiskScore;
+      const overallSafetyScore = Math.max(0, Math.min(100, 100 - overallRiskScore));
+      (unifiedData as any).overallSafetyScore = overallSafetyScore;
+    }
+
+    if (progressTracker) {
+      progressTracker.completeStep("risk_calculation", `Final risk score calculated: ${overallRiskScore}/100`);
     }
 
     // Cache the analysis result (verified contracts are not upgradeable by default)

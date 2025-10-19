@@ -198,15 +198,15 @@ export async function inferRiskOn0G(
   const instruction = `
 You are a smart-contract risk scorer. OUTPUT STRICT MINIFIED JSON only.
 
-Scoring: 0 = safest, 1000 = most dangerous. Never claim "secure" in text.
+Scoring: 0 = safest, 100 = most dangerous. Never claim "secure" in text.
 Rules (monotonic):
-- If heuristic.severity == "high" => score >= 800.
-- If any(opcodeFlags.has_delegatecall, has_callcode, has_selfdestruct, has_create2) => score >= 800,
-  unless you explicitly justify a minimal-proxy forwarder case (then min 500).
-- If heuristic.severity == "none" and no risky opcodes => score <= 200.
+- If heuristic.severity == "high" => score >= 80.
+- If any(opcodeFlags.has_delegatecall, has_callcode, has_selfdestruct, has_create2) => score >= 80,
+  unless you explicitly justify a minimal-proxy forwarder case (then min 50).
+- If heuristic.severity == "none" and no risky opcodes => score <= 20.
 
 Return:
-{"score": <int 0..1000>, "reason": "<<=280 chars>", "rules_triggered": ["...","..."]}
+{"score": <int 0..100>, "reason": "<<=280 chars>", "rules_triggered": ["...","..."]}
 `;
 
   // Add opcode flags and heuristic info
