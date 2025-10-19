@@ -1,20 +1,37 @@
 "use client";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PropsWithChildren } from "react";
 import { WagmiConfig, createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
-const config = createConfig({
+declare module 'wagmi' {
+  interface Register {
+    config: typeof config
+  }
+}
+
+const queryClient = new QueryClient();
+
+export const config = createConfig({
   chains: [mainnet, sepolia],
+  connectors: [
+    injected(),
+  ],
   transports: {
     [mainnet.id]: http(),
     [sepolia.id]: http(),
   },
-  connectors: [injected()],
   ssr: true,
 });
 
 export function Web3Provider({ children }: PropsWithChildren) {
-  return <WagmiConfig config={config}>{children}</WagmiConfig>;
+  return (
+    <WagmiConfig config={config}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    </WagmiConfig>
+  )
 }

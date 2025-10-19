@@ -1,15 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Wallet, LogOut } from "lucide-react";
 import { useState } from "react";
 import logo from "../../../public/logo-withoutbg.png";
 import Image from "next/image";
 import { NetworkSelector } from "./NetworkSelector";
+import { WalletSelector } from "./WalletSelector";
+import { useAccount, useConnect } from "wagmi";
+import { disconnect } from "@wagmi/core";
+import { config } from "../contexts/Web3Provider";
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isWalletSelectorOpen, setIsWalletSelectorOpen] = useState(false);
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const handleConnect = () => {
+    setIsWalletSelectorOpen(true);
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await disconnect(config);
+    } catch (error) {
+      console.error("Failed to disconnect:", error);
+    }
+  };
+
+
+
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   return (
     <nav className="bg-black/90 backdrop-blur-xl border-b border-neon-blue/40 sticky top-0 z-50">
@@ -54,6 +79,33 @@ export function Navbar() {
 
             {/* Network Selector */}
             <NetworkSelector />
+
+            {/* Wallet Connection */}
+            <div className="ml-4">
+              {isConnected ? (
+                <div className="flex items-center space-x-2 px-4 py-2 bg-neon-green/10 border border-neon-green/30 rounded-lg group">
+                  <Wallet className="h-4 w-4 text-neon-green" />
+                  <span className="text-neon-green text-sm font-bold">
+                    {formatAddress(address!)}
+                  </span>
+                  <button
+                    onClick={handleDisconnect}
+                    className="ml-2 p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded transition-all duration-200"
+                    title="Disconnect wallet"
+                  >
+                    <LogOut className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleConnect}
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-purple hover:to-neon-blue text-white font-bold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-neon-blue/25"
+                >
+                  <Wallet className="h-4 w-4" />
+                  <span>Connect Wallet</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -111,10 +163,51 @@ export function Navbar() {
                   <NetworkSelector />
                 </div>
               </div>
+
+              {/* Mobile Wallet Connection */}
+              <div className="pt-2 border-t border-neon-blue/20">
+                <div className="px-4 py-3">
+                  {isConnected ? (
+                    <div className="flex items-center space-x-2 px-4 py-3 bg-neon-green/10 border border-neon-green/30 rounded-lg group">
+                      <Wallet className="h-4 w-4 text-neon-green" />
+                      <span className="text-neon-green text-sm font-bold flex-1">
+                        {formatAddress(address!)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          handleDisconnect();
+                          setIsMenuOpen(false);
+                        }}
+                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded transition-all duration-200"
+                        title="Disconnect wallet"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handleConnect();
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-purple hover:to-neon-blue text-white font-bold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-neon-blue/25"
+                    >
+                      <Wallet className="h-4 w-4" />
+                      <span>Connect Wallet</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
+      
+      {/* Wallet Selector Modal */}
+      <WalletSelector 
+        isOpen={isWalletSelectorOpen} 
+        onClose={() => setIsWalletSelectorOpen(false)} 
+      />
     </nav>
   );
 }
