@@ -256,7 +256,6 @@ export async function generateTestsOn0G(
       }
 
       // 9) Parse output
-      const text = data?.choices?.[0]?.message?.content ?? "{}";
       const testResult = parseTestGenerationResponse(data, features.testFrameworks);
       
       logger.info(`[${requestId}] 0G test generation completed successfully`);
@@ -351,7 +350,7 @@ Make sure the JSON is valid and properly formatted. Include all necessary import
 }
 
 function parseTestGenerationResponse(
-  data: any, 
+  data: unknown, 
   requestedFrameworks: ('hardhat' | 'foundry')[]
 ): Omit<TestGenerationResponse, 'success'> {
   try {
@@ -361,13 +360,13 @@ function parseTestGenerationResponse(
     if (typeof data === 'string') {
       // If response is a string, try to parse it as JSON
       testData = JSON.parse(data);
-    } else if (data.choices && data.choices[0] && data.choices[0].message) {
+    } else if (data && typeof data === 'object' && 'choices' in data && Array.isArray((data as { choices: unknown[] }).choices) && (data as { choices: Array<{ message?: { content?: string } }> }).choices[0] && (data as { choices: Array<{ message: { content: string } }> }).choices[0].message) {
       // If response is from OpenAI format, extract content
-      const content = data.choices[0].message.content;
+      const content = (data as { choices: Array<{ message: { content: string } }> }).choices[0].message.content;
       testData = JSON.parse(content);
-    } else if (data.content) {
+    } else if (data && typeof data === 'object' && 'content' in data) {
       // If response has content field
-      testData = JSON.parse(data.content);
+      testData = JSON.parse((data as { content: string }).content);
     } else {
       // Try to use the data directly
       testData = data;

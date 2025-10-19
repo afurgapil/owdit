@@ -14,7 +14,7 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletSelectorOpen, setIsWalletSelectorOpen] = useState(false);
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { } = useConnect();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -24,7 +24,7 @@ export function Navbar() {
 
   const handleDisconnect = async () => {
     try {
-      await disconnect(config);
+      await disconnect(config as unknown as Parameters<typeof disconnect>[0]);
     } catch (error) {
       console.error("Failed to disconnect:", error);
     }

@@ -114,7 +114,7 @@ export class CommunityCommentsService {
 
     await (votesCollection as unknown as Collection<Document>).createIndex(
       { commentId: 1, voter: 1 },
-      { unique: true } as any
+      { unique: true } as { unique: boolean }
     );
 
     this.connection = { client, db, collection };

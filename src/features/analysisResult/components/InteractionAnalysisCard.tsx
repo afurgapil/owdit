@@ -34,18 +34,6 @@ export function InteractionAnalysisCard({ interactionAnalysis, className }: Inte
     }
   };
 
-  const getActivityLevelColor = (activityLevel: string) => {
-    switch (activityLevel) {
-      case "high":
-        return "text-neon-green";
-      case "medium":
-        return "text-neon-orange";
-      case "low":
-        return "text-neon-pink";
-      default:
-        return "text-gray-400";
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();

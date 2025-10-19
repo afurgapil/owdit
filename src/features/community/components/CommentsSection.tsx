@@ -63,7 +63,7 @@ export function CommentsSection(props: {
         let items = (json.data?.items || []).map((c: CommentItem) => ({
           ...c,
           createdAt: new Date(c.createdAt).toISOString(),
-          replies: (c.replies || []).map((r: any) => ({
+          replies: (c.replies || []).map((r: CommentItem) => ({
             ...r,
             createdAt: new Date(r.createdAt).toISOString(),
           })),
@@ -115,7 +115,7 @@ export function CommentsSection(props: {
       `ts:${timestamp}`,
       `nonce:${nonce}`,
     ].join("\n");
-    const signature = await (window as any).ethereum.request({
+    const signature = await (window as { ethereum: { request: (params: { method: string; params: string[] }) => Promise<string> } }).ethereum.request({
       method: "personal_sign",
       params: [msg, wagmiAddress],
     });
@@ -143,8 +143,8 @@ export function CommentsSection(props: {
       if (json.data) {
         const created: CommentItem = {
           ...json.data,
-          createdAt: new Date((json.data as any).createdAt).toISOString(),
-        } as any;
+          createdAt: new Date((json.data as { createdAt: string }).createdAt).toISOString(),
+        } as CommentItem;
         setItems((prev) => [created, ...prev]);
       }
     } catch (e) {
@@ -217,7 +217,7 @@ export function CommentsSection(props: {
       });
       const j = await res.json();
       if (!res.ok || !j.success) throw new Error(j.error || "Reply failed");
-      const created: CommentItem = { ...(j.data as any), createdAt: new Date(j.data.createdAt).toISOString() };
+      const created: CommentItem = { ...(j.data as CommentItem), createdAt: new Date((j.data as { createdAt: string }).createdAt).toISOString() };
       setItems((prev) =>
         prev.map((c) =>
           c._id === parentId

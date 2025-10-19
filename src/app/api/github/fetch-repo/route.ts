@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     let repoData = null;
     try {
       repoData = await fetchRepositoryInfo(repoInfo.owner, repoInfo.repo);
-    } catch (error) {
+    } catch {
       // Continue without repository info
     }
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       }),
       { status: 200 }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       fetchRepoResponseSchema.parse({
         success: false,
@@ -188,7 +188,7 @@ async function fetchRepositoryInfo(owner: string, repo: string): Promise<Reposit
     }
 
     return await response.json();
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -219,7 +219,7 @@ async function fetchSolidityFiles(
 
     // Limit to maxFiles
     return filteredFiles.slice(0, maxFiles);
-  } catch (error) {
+  } catch {
     return [];
   }
 }
@@ -253,7 +253,7 @@ async function fetchFileContent(fileUrl: string): Promise<string | null> {
     }
     
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -297,7 +297,7 @@ export async function GET(request: NextRequest) {
       }),
       { status: 200 }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       fetchRepoResponseSchema.parse({
         success: false,
@@ -355,7 +355,7 @@ async function fetchDirectoryContents(owner: string, repo: string, path: string,
               url: item.html_url
             });
           }
-        } catch (error) {
+        } catch {
         }
       } else if (item.type === 'dir') {
         // Skip common non-contract directories
@@ -373,7 +373,7 @@ async function fetchDirectoryContents(owner: string, repo: string, path: string,
     }
 
     return files;
-  } catch (error) {
+  } catch {
     return [];
   }
 }

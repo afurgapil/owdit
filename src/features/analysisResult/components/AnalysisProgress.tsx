@@ -145,7 +145,7 @@ export function AnalysisProgress({
       </div>
 
       <div className="space-y-4">
-        {progressData.progress.map((step, index) => (
+        {progressData.progress.map((step) => (
           <div
             key={step.step}
             className={`flex items-start space-x-4 p-4 rounded-xl border transition-all duration-300 ${

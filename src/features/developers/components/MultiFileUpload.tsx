@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, X, AlertCircle, CheckCircle } from "lucide-react";
 
 interface FileWithPreview {
   file: File;
@@ -29,23 +29,6 @@ export default function MultiFileUpload({
   const [errors, setErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
-    // Check file size
-    if (file.size > maxSize * 1024 * 1024) {
-      return `File ${file.name} exceeds ${maxSize}MB limit`;
-    }
-
-    // Check file type
-    const hasValidExtension = acceptedTypes.some(ext => 
-      file.name.toLowerCase().endsWith(ext)
-    );
-    if (!hasValidExtension) {
-      return `File ${file.name} has unsupported type. Allowed: ${acceptedTypes.join(', ')}`;
-    }
-
-    return null;
-  };
-
   const readFileContent = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -58,7 +41,23 @@ export default function MultiFileUpload({
     });
   };
 
-  const addFiles = async (newFiles: FileList) => {
+  const addFiles = useCallback(async (newFiles: FileList) => {
+    const validateFile = (file: File): string | null => {
+      // Check file size
+      if (file.size > maxSize * 1024 * 1024) {
+        return `File ${file.name} exceeds ${maxSize}MB limit`;
+      }
+
+      // Check file type
+      const hasValidExtension = acceptedTypes.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+      );
+      if (!hasValidExtension) {
+        return `File ${file.name} has unsupported type. Allowed: ${acceptedTypes.join(', ')}`;
+      }
+
+      return null;
+    };
     const newFileList: FileWithPreview[] = [];
     const newErrors: string[] = [];
 
@@ -95,7 +94,7 @@ export default function MultiFileUpload({
           path: file.webkitRelativePath || file.name
         };
         newFileList.push(fileWithPreview);
-      } catch (error) {
+      } catch {
         newErrors.push(`Failed to read file ${file.name}`);
       }
     }
@@ -110,7 +109,7 @@ export default function MultiFileUpload({
       onFilesChange(updatedFiles);
       setErrors([]);
     }
-  };
+  }, [files, maxFiles, maxSize, acceptedTypes, onFilesChange]);
 
   const removeFile = (fileId: string) => {
     const updatedFiles = files.filter(f => f.id !== fileId);
@@ -136,7 +135,7 @@ export default function MultiFileUpload({
     if (droppedFiles.length > 0) {
       addFiles(droppedFiles);
     }
-  }, [files]);
+  }, [addFiles]);
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;

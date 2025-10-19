@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Github, Search, ExternalLink, FileText, AlertCircle, CheckCircle, Loader } from "lucide-react";
+import { Github, Search, ExternalLink, AlertCircle, CheckCircle, Loader } from "lucide-react";
 
 interface GitHubFile {
   path: string;

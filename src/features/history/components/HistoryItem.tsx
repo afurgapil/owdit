@@ -1,9 +1,10 @@
 "use client";
-import { Clock, MessageCircle, ChevronDown, ChevronUp, Copy, Check, Eye, User, Activity } from "lucide-react";
-import { formatTimestamp, shortenAddress } from "../../../shared/lib/utils";
+import { Clock, MessageCircle, ChevronDown, ChevronUp, Copy, Check, Eye } from "lucide-react";
+import { formatTimestamp } from "../../../shared/lib/utils";
 import { CommentsSection } from "../../community/components/CommentsSection";
 import { DeployerAnalysisCard } from "../../analysisResult/components/DeployerAnalysisCard";
 import { InteractionAnalysisCard } from "../../analysisResult/components/InteractionAnalysisCard";
+import { DeployerAnalysis, InteractionAnalysis } from "../../../types/contractAnalysis";
 import { useState } from "react";
 
 interface HistoryItemProps {
@@ -18,8 +19,8 @@ interface HistoryItemProps {
     status: string;
     findings: unknown[];
     overallRiskScore?: number;
-    deployerAnalysis?: any;
-    interactionAnalysis?: any;
+    deployerAnalysis?: unknown;
+    interactionAnalysis?: unknown;
   };
 }
 
@@ -165,49 +166,60 @@ export function HistoryItem({ item }: HistoryItemProps) {
         <div className="border-t border-gray-600 bg-gray-900/20">
           <div className="p-6 space-y-6">
             {/* Overall Risk Score */}
-            {item.overallRiskScore && (
-              <div className="glass-card p-6 rounded-2xl border border-neon-blue/30">
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-white mb-4 neon-text neon-blue">
-                    Overall Risk Assessment
-                  </h3>
-                  <div className="flex items-center justify-center mb-4">
-                    <div
-                      className={`w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black border-4 ${
-                        item.overallRiskScore >= 80
-                          ? "bg-neon-green/20 border-neon-green/40 text-neon-green"
-                          : item.overallRiskScore >= 60
-                          ? "bg-neon-orange/20 border-neon-orange/40 text-neon-orange"
-                          : item.overallRiskScore >= 40
-                          ? "bg-neon-pink/20 border-neon-pink/40 text-neon-pink"
-                          : "bg-red-500/20 border-red-500/40 text-red-400"
-                      } glow-owl`}
-                    >
-                      {item.overallRiskScore}
+            {(() => {
+              const riskScore = typeof item.overallRiskScore === 'number' ? item.overallRiskScore : 0;
+              if (riskScore <= 0) return null;
+              
+              return (
+                <div className="glass-card p-6 rounded-2xl border border-neon-blue/30">
+                  <div className="text-center">
+                    <h3 className="text-2xl font-bold text-white mb-4 neon-text neon-blue">
+                      Overall Risk Assessment
+                    </h3>
+                    <div className="flex items-center justify-center mb-4">
+                      <div
+                        className={`w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black border-4 ${
+                          riskScore >= 80
+                            ? "bg-neon-green/20 border-neon-green/40 text-neon-green"
+                            : riskScore >= 60
+                            ? "bg-neon-orange/20 border-neon-orange/40 text-neon-orange"
+                            : riskScore >= 40
+                            ? "bg-neon-pink/20 border-neon-pink/40 text-neon-pink"
+                            : "bg-red-500/20 border-red-500/40 text-red-400"
+                        } glow-owl`}
+                      >
+                        {riskScore}
+                      </div>
                     </div>
+                    <p className="text-lg text-gray-300">
+                      Combined risk score based on bytecode, deployer, and interaction analysis
+                    </p>
                   </div>
-                  <p className="text-lg text-gray-300">
-                    Combined risk score based on bytecode, deployer, and interaction analysis
-                  </p>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Deployer Analysis */}
-            {item.deployerAnalysis && (
-              <DeployerAnalysisCard 
-                deployerAnalysis={item.deployerAnalysis} 
-                className="mb-6"
-              />
-            )}
+            {(() => {
+              if (!item.deployerAnalysis || typeof item.deployerAnalysis !== 'object') return null;
+              return (
+                <DeployerAnalysisCard 
+                  deployerAnalysis={item.deployerAnalysis as DeployerAnalysis} 
+                  className="mb-6"
+                />
+              );
+            })()}
 
             {/* Interaction Analysis */}
-            {item.interactionAnalysis && (
-              <InteractionAnalysisCard 
-                interactionAnalysis={item.interactionAnalysis} 
-                className="mb-6"
-              />
-            )}
+            {(() => {
+              if (!item.interactionAnalysis || typeof item.interactionAnalysis !== 'object') return null;
+              return (
+                <InteractionAnalysisCard 
+                  interactionAnalysis={item.interactionAnalysis as InteractionAnalysis} 
+                  className="mb-6"
+                />
+              );
+            })()}
 
             {/* Basic Contract Info */}
             <div className="glass-card p-6 rounded-2xl border border-neon-blue/30">

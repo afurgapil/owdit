@@ -17,9 +17,16 @@ import {
 import { MatrixRain } from "../../shared/components/MatrixRain";
 import MultiFileUpload from "../../features/developers/components/MultiFileUpload";
 import GitHubImport from "../../features/developers/components/GitHubImport";
-import ImportResolver from "../../features/developers/components/ImportResolver";
 import TestGeneration from "../../features/developers/components/TestGeneration";
 import { MultiFileAnalysis, TestGenerationResult } from "../../types/contractAnalysis";
+
+interface FileWithPreview {
+  file: File;
+  id: string;
+  content: string;
+  size: number;
+  path: string;
+}
 
 interface AnalysisResult {
   score: number;
@@ -53,7 +60,6 @@ type AnalysisMode = 'single' | 'multi-file' | 'github' | 'test-generation';
 export default function ContractAnalyzer() {
   const [mode, setMode] = useState<AnalysisMode>('single');
   const [code, setCode] = useState("");
-  const [contractName, setContractName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -63,11 +69,8 @@ export default function ContractAnalyzer() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Multi-file state
-  const [multiFiles, setMultiFiles] = useState<any[]>([]);
-  const [githubFiles, setGithubFiles] = useState<any[]>([]);
-  const [selectedGithubFiles, setSelectedGithubFiles] = useState<any[]>([]);
-  const [resolvedImports, setResolvedImports] = useState<any>(null);
-  const [repoInfo, setRepoInfo] = useState<any>(null);
+  const [multiFiles, setMultiFiles] = useState<FileWithPreview[]>([]);
+  const [selectedGithubFiles, setSelectedGithubFiles] = useState<FileWithPreview[]>([]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -165,11 +168,6 @@ export default function ContractAnalyzer() {
 
       if (data.success) {
         setMultiFileResult(data.data);
-        setResolvedImports({
-          resolved: [],
-          missing: [],
-          autoFetched: []
-        });
       } else {
         setError(data.error || "Multi-file analysis failed");
       }
@@ -212,11 +210,6 @@ export default function ContractAnalyzer() {
 
       if (data.success) {
         setMultiFileResult(data.data);
-        setResolvedImports({
-          resolved: [],
-          missing: [],
-          autoFetched: []
-        });
       } else {
         setError(data.error || "GitHub analysis failed");
       }
@@ -470,9 +463,18 @@ contract MyContract {
                 </div>
                 
                 <GitHubImport
-                  onFilesChange={setGithubFiles}
-                  onSelectedFilesChange={setSelectedGithubFiles}
-                  onRepoInfoChange={setRepoInfo}
+                  onFilesChange={() => {}}
+                  onSelectedFilesChange={(files) => {
+                    const convertedFiles = files.map(file => ({
+                      file: new File([file.content], file.path.split('/').pop() || 'file.sol'),
+                      id: Math.random().toString(36).substr(2, 9),
+                      content: file.content,
+                      size: file.size,
+                      path: file.path
+                    }));
+                    setSelectedGithubFiles(convertedFiles);
+                  }}
+                  onRepoInfoChange={() => {}}
                 />
               </div>
             )}

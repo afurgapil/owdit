@@ -142,7 +142,6 @@ export async function POST(request: NextRequest) {
       // Extract basic metrics from combined code
       lineCount: combinedCode.split("\n").length,
       functionCount: (combinedCode.match(/function\s+\w+/g) || []).length,
-      contractCount: (combinedCode.match(/contract\s+\w+/g) || []).length,
       // Extract potential security patterns
       hasModifiers: combinedCode.includes("modifier"),
       hasEvents: combinedCode.includes("event"),
@@ -225,8 +224,8 @@ interface AIResult {
 
 function generateMultiFileAnalysisResult(
   files: Array<{ name: string; content: string; path: string; size?: number }>,
-  parsedFiles: any,
-  resolvedImports: any,
+  parsedFiles: unknown,
+  resolvedImports: unknown,
   aiResult: AIResult,
   language: string
 ): MultiFileAnalysis {
@@ -262,20 +261,20 @@ function generateMultiFileAnalysisResult(
     Object.fromEntries(
       files.map(file => [
         file.path,
-        resolvedImports.resolved
-          .filter((imp: any) => imp.path.startsWith(file.path))
-          .map((imp: any) => imp.path)
+        (resolvedImports as { resolved: Array<{ path: string }> }).resolved
+          .filter((imp) => imp.path.startsWith(file.path))
+          .map((imp) => imp.path)
       ])
     ) : {};
 
   // Individual file stats
   const individualFiles = files.map(file => {
-    const fileContracts = parsedFiles.contracts.filter((c: any) => c.path === file.path);
+    const fileContracts = (parsedFiles as { contracts: Array<{ path: string; functions: unknown[] }> }).contracts.filter((c) => c.path === file.path);
     return {
       path: file.path,
       lineCount: file.content.split('\n').length,
       contractCount: fileContracts.length,
-      functionCount: fileContracts.reduce((sum: number, c: any) => sum + c.functions.length, 0)
+      functionCount: fileContracts.reduce((sum: number, c) => sum + c.functions.length, 0)
     };
   });
 
@@ -285,7 +284,7 @@ function generateMultiFileAnalysisResult(
       content: f.content,
       size: f.size || f.content.length
     })),
-    mainContract: parsedFiles.mainContract,
+    mainContract: (parsedFiles as { mainContract?: string }).mainContract,
     dependencies,
     combinedAnalysis: {
       score,
@@ -438,10 +437,9 @@ function generateRecommendations(
   securityIssues: SecurityIssue[],
   gasOptimization: GasOptimization,
   codeQuality: CodeQuality,
-  resolvedImports: any
+  resolvedImports: unknown
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
-  const combinedCode = files.map(f => f.content).join('\n');
 
   // Security recommendations
   if (securityIssues.length > 0) {
@@ -498,12 +496,12 @@ function generateRecommendations(
   }
 
   // Import resolution recommendations
-  if (resolvedImports && resolvedImports.missing.length > 0) {
+  if (resolvedImports && (resolvedImports as { missing?: unknown[] }).missing && (resolvedImports as { missing: unknown[] }).missing.length > 0) {
     recommendations.push({
       category: "Dependencies",
       priority: "high",
       title: "Missing Dependencies",
-      description: `${resolvedImports.missing.length} imports could not be resolved`,
+      description: `${(resolvedImports as { missing: unknown[] }).missing.length} imports could not be resolved`,
       suggestion: "Upload missing files or use standard libraries like OpenZeppelin"
     });
   }
@@ -553,42 +551,55 @@ function calculateOverallScore(
   return Math.max(0, Math.min(100, score));
 }
 
-function calculateFallbackScore(code: string, features: any): number {
+function calculateFallbackScore(code: string, features: unknown): number {
   let score = 80; // Start with good score for multi-file contracts
+  const f = features as {
+    hasDelegateCall?: boolean;
+    hasSelfDestruct?: boolean;
+    hasAssembly?: boolean;
+    hasUnchecked?: boolean;
+    hasLowLevelCall?: boolean;
+    hasReentrancyGuard?: boolean;
+    hasOwnable?: boolean;
+    hasPausable?: boolean;
+    hasEvents?: boolean;
+    hasModifiers?: boolean;
+    fileCount?: number;
+  };
 
   // Check for security issues and deduct points
-  if (features.hasDelegateCall) {
+  if (f.hasDelegateCall) {
     score = Math.min(score, 20); // Very dangerous
   }
-  if (features.hasSelfDestruct) {
+  if (f.hasSelfDestruct) {
     score = Math.min(score, 15); // Very dangerous
   }
-  if (features.hasAssembly) {
+  if (f.hasAssembly) {
     score = Math.min(score, 30); // Dangerous
   }
-  if (features.hasUnchecked) {
+  if (f.hasUnchecked) {
     score = Math.min(score, 40); // Medium risk
   }
-  if (features.hasLowLevelCall && !features.hasReentrancyGuard) {
+  if (f.hasLowLevelCall && !f.hasReentrancyGuard) {
     score = Math.min(score, 35); // Reentrancy risk
   }
 
   // Check for good practices and add points
-  if (features.hasOwnable) {
+  if (f.hasOwnable) {
     score = Math.min(100, score + 10); // Good access control
   }
-  if (features.hasPausable) {
+  if (f.hasPausable) {
     score = Math.min(100, score + 5); // Emergency stop
   }
-  if (features.hasEvents) {
+  if (f.hasEvents) {
     score = Math.min(100, score + 5); // Good for monitoring
   }
-  if (features.hasModifiers) {
+  if (f.hasModifiers) {
     score = Math.min(100, score + 5); // Code reusability
   }
 
   // Multi-file bonus
-  if (features.fileCount > 1) {
+  if (f.fileCount && f.fileCount > 1) {
     score = Math.min(100, score + 5); // Better architecture
   }
 

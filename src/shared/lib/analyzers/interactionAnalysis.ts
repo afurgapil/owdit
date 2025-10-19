@@ -61,7 +61,7 @@ export async function getContractInternalTransactions(
   contractAddress: string,
   apiKey: string,
   limit: number = 1000
-): Promise<any[]> {
+): Promise<unknown[]> {
   try {
     const chain = getChainById(chainId);
     if (!chain) return [];

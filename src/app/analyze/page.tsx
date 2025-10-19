@@ -10,6 +10,7 @@ import { Brain, Database, CheckCircle, Loader2 } from "lucide-react";
 import { CommentsSection } from "../../features/community/components/CommentsSection";
 import { DeployerAnalysisCard } from "../../features/analysisResult/components/DeployerAnalysisCard";
 import { InteractionAnalysisCard } from "../../features/analysisResult/components/InteractionAnalysisCard";
+import { DeployerAnalysis, InteractionAnalysis } from "../../types/contractAnalysis";
 
 function AnalyzeContent() {
   const { selectedChain } = useNetwork();
@@ -253,16 +254,6 @@ function AnalyzeContent() {
         {/* Results */}
         {result && (
           <div className="space-y-8">
-            {/* Safe type extraction for optional fields */}
-            {(() => {
-              const contractName = "contractName" in result ? (result as { contractName?: string }).contractName : undefined;
-              const compilerVersion = "compilerVersion" in result ? (result as { compilerVersion?: string }).compilerVersion : undefined;
-              const overallRiskScore = "overallRiskScore" in result ? (result as { overallRiskScore?: number }).overallRiskScore : undefined;
-              const deployerAnalysis = "deployerAnalysis" in result ? (result as { deployerAnalysis?: any }).deployerAnalysis : undefined;
-              const interactionAnalysis = "interactionAnalysis" in result ? (result as { interactionAnalysis?: any }).interactionAnalysis : undefined;
-              
-              return null; // This is just for type extraction, actual rendering happens below
-            })()}
             {/* Analysis Complete Message */}
             <div className="text-center">
               <div className="inline-flex items-center px-6 py-3 bg-neon-green/20 border border-neon-green rounded-full text-neon-green font-bold text-lg">
@@ -604,20 +595,20 @@ function AnalyzeContent() {
 
             {/* Enhanced Analysis Cards */}
             {(() => {
-              const deployerAnalysis = "deployerAnalysis" in result ? (result as { deployerAnalysis?: any }).deployerAnalysis : undefined;
+              const deployerAnalysis = "deployerAnalysis" in result ? (result as { deployerAnalysis?: unknown }).deployerAnalysis : undefined;
               return deployerAnalysis ? (
                 <DeployerAnalysisCard 
-                  deployerAnalysis={deployerAnalysis} 
+                  deployerAnalysis={deployerAnalysis as DeployerAnalysis} 
                   className="mb-6"
                 />
               ) : null;
             })()}
 
             {(() => {
-              const interactionAnalysis = "interactionAnalysis" in result ? (result as { interactionAnalysis?: any }).interactionAnalysis : undefined;
+              const interactionAnalysis = "interactionAnalysis" in result ? (result as { interactionAnalysis?: unknown }).interactionAnalysis : undefined;
               return interactionAnalysis ? (
                 <InteractionAnalysisCard 
-                  interactionAnalysis={interactionAnalysis} 
+                  interactionAnalysis={interactionAnalysis as InteractionAnalysis} 
                   className="mb-6"
                 />
               ) : null;

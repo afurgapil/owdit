@@ -14,7 +14,7 @@ export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
   const { isConnected } = useAccount();
   const [selectedConnector, setSelectedConnector] = useState<string | null>(null);
 
-  const handleConnect = (connector: any) => {
+  const handleConnect = (connector: { id: string }) => {
     setSelectedConnector(connector.id);
     connect({ connector });
   };
@@ -35,7 +35,7 @@ export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
     }
   };
 
-  const getConnectorName = (connector: any) => {
+  const getConnectorName = (connector: { id: string; name?: string }) => {
     switch (connector.id) {
       case "injected":
         return "Browser Wallet";
@@ -79,7 +79,7 @@ export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
 
         {/* Description */}
         <p className="text-gray-300 mb-6 text-center">
-          Choose how you'd like to connect your wallet
+          Choose how you&apos;d like to connect your wallet
         </p>
 
         {/* Wallet Options */}

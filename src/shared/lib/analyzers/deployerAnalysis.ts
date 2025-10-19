@@ -16,6 +16,7 @@ interface EtherscanTransaction {
   txreceipt_status: string;
   methodId: string;
   functionName: string;
+  contractAddress?: string;
 }
 
 // Contract creation transaction interface
@@ -31,6 +32,7 @@ interface ContractCreationTx {
   isError: string;
   txreceipt_status: string;
   contractAddress: string;
+  contractCreator?: string;
 }
 
 /**

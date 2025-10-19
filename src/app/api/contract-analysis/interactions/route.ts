@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeContractInteractions } from "../../../../shared/lib/analyzers/interactionAnalysis";
-import { InteractionAnalysis } from "../../../../types/contractAnalysis";
 import { z } from "zod";
 import { genRequestId, logger } from "../../../../shared/lib/logger";
 

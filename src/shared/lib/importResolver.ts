@@ -212,7 +212,7 @@ async function resolveNpmImport(importPath: string): Promise<ImportInfo> {
       resolved: false,
       error: 'Contract not found in common libraries'
     };
-  } catch (error) {
+  } catch {
     return {
       path: importPath,
       type: 'npm',
@@ -235,7 +235,7 @@ async function resolveGithubImport(importPath: string): Promise<ImportInfo> {
       resolved: false,
       error: 'GitHub imports not yet implemented'
     };
-  } catch (error) {
+  } catch {
     return {
       path: importPath,
       type: 'github',

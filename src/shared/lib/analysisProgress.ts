@@ -168,7 +168,6 @@ export class AnalysisProgressTracker {
     // Only show steps sequentially: completed steps + current unlocked step
     const isStepCompleted = (id: string) => this.progress.get(id)?.status === 'completed';
 
-    const allInOrder = this.milestones.map(m => this.progress.get(m.id) as AnalysisProgress);
 
     const visible: AnalysisProgress[] = [];
     for (const milestone of this.milestones) {

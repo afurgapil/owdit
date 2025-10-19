@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { AnalysisProgressTracker } from "../../../shared/lib/analysisProgress";
 
 // In-memory progress storage (in production, use Redis or database)
-const progressStore = new Map<string, any>();
-
-const progressRequestSchema = z.object({
-  sessionId: z.string(),
-  contractAddress: z.string(),
-  chainId: z.number(),
-});
+const progressStore = new Map<string, AnalysisProgressTracker>();
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeDeployerWallet } from "../../../../shared/lib/analyzers/deployerAnalysis";
-import { DeployerAnalysis } from "../../../../types/contractAnalysis";
 import { z } from "zod";
 import { genRequestId, logger } from "../../../../shared/lib/logger";
 

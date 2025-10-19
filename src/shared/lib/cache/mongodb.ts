@@ -188,11 +188,11 @@ export class ContractCacheService {
         ttl,
         overallRiskScore: analysis.overallRiskScore, // quick access
         overallSafetyScore:
-          (analysis as any).overallSafetyScore !== undefined
-            ? (analysis as any).overallSafetyScore
+          (analysis as unknown as { overallSafetyScore?: number }).overallSafetyScore !== undefined
+            ? (analysis as unknown as { overallSafetyScore: number }).overallSafetyScore
             : analysis.overallRiskScore !== undefined
             ? Math.max(0, Math.min(100, 100 - (analysis.overallRiskScore as number)))
-            : undefined,
+            : undefined, // Fixed type assertion
       };
 
       await this.connection!.collection.replaceOne(

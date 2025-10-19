@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle, X, Upload, ExternalLink, Download } from "lucide-react";
+import { AlertTriangle, CheckCircle, X, Upload, Download } from "lucide-react";
 
 interface ImportInfo {
   path: string;
@@ -29,7 +29,6 @@ export default function ImportResolver({
   onIgnoreImport 
 }: ImportResolverProps) {
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
-  const [ignoredImports, setIgnoredImports] = useState<Set<string>>(new Set());
 
   if (!resolvedImports) {
     return null;
@@ -64,7 +63,6 @@ export default function ImportResolver({
   };
 
   const handleIgnoreImport = (importPath: string) => {
-    setIgnoredImports(prev => new Set(prev).add(importPath));
     onIgnoreImport(importPath);
   };
 
@@ -81,48 +79,6 @@ export default function ImportResolver({
     }
   };
 
-  const getImportTypeColor = (type: ImportInfo['type']) => {
-    switch (type) {
-      case 'npm':
-        return 'text-blue-400';
-      case 'github':
-        return 'text-purple-400';
-      case 'relative':
-        return 'text-green-400';
-      default:
-        return 'text-gray-400';
-    }
-  };
-
-  const getStatusIcon = (importInfo: ImportInfo) => {
-    if (importInfo.resolved) {
-      return <CheckCircle className="h-4 w-4 text-green-400" />;
-    }
-    if (ignoredImports.has(importInfo.path)) {
-      return <X className="h-4 w-4 text-gray-400" />;
-    }
-    return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
-  };
-
-  const getStatusText = (importInfo: ImportInfo) => {
-    if (importInfo.resolved) {
-      return 'Resolved';
-    }
-    if (ignoredImports.has(importInfo.path)) {
-      return 'Ignored';
-    }
-    return 'Missing';
-  };
-
-  const getStatusColor = (importInfo: ImportInfo) => {
-    if (importInfo.resolved) {
-      return 'text-green-400';
-    }
-    if (ignoredImports.has(importInfo.path)) {
-      return 'text-gray-400';
-    }
-    return 'text-yellow-400';
-  };
 
   return (
     <div className="space-y-6">

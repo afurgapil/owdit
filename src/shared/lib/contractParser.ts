@@ -1,4 +1,3 @@
-import { MultiFileAnalysis } from "../../types/contractAnalysis";
 
 export interface ContractInfo {
   name: string;

@@ -51,38 +51,6 @@ export interface ContractSource {
 // Union type for both results
 export type ContractAnalysisResult = ContractSource | RiskAnalysisResult;
 
-// Sourcify API v2 response interface
-interface SourcifyV2Response {
-  match: "match" | "exact_match" | null;
-  creationMatch: "match" | "exact_match" | null;
-  runtimeMatch: "match" | "exact_match" | null;
-  chainId: string;
-  address: string;
-  verifiedAt?: string;
-  sources?: Record<string, string>;
-  abi?: Array<{
-    type: string;
-    name?: string;
-    inputs?: Array<{
-      name: string;
-      type: string;
-      indexed?: boolean;
-    }>;
-    outputs?: Array<{
-      name: string;
-      type: string;
-    }>;
-    stateMutability?: string;
-    anonymous?: boolean;
-  }>;
-  compilation?: {
-    language?: string;
-    compiler?: string;
-    compilerVersion?: string;
-    name?: string;
-    fullyQualifiedName?: string;
-  };
-}
 
 // Etherscan response interface
 interface EtherscanResponse {

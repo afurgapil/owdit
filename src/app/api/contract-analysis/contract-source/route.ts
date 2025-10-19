@@ -215,7 +215,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const chainId = parseInt(searchParams.get("chainId") || "1");
     const address = searchParams.get("address");
-    const sessionId = searchParams.get("sessionId") || requestId;
     const enableProgress = searchParams.get("progress") === "true";
 
     if (!address) {
@@ -603,7 +602,7 @@ export async function GET(request: NextRequest) {
     if (overallRiskScore >= 0) {
       unifiedData.overallRiskScore = overallRiskScore;
       const overallSafetyScore = Math.max(0, Math.min(100, 100 - overallRiskScore));
-      (unifiedData as any).overallSafetyScore = overallSafetyScore;
+      (unifiedData as { overallSafetyScore?: number }).overallSafetyScore = overallSafetyScore;
     }
 
     if (progressTracker) {
