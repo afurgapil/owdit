@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
+import { shortenAddress } from "../../../shared/lib/utils";
 
 type CommentItem = {
   _id: string;
@@ -15,8 +16,9 @@ type CommentItem = {
 export function CommentsSection(props: {
   contractAddress: string;
   chainId: number;
+  onLoadingChange?: (loading: boolean) => void;
 }) {
-  const { contractAddress, chainId } = props;
+  const { contractAddress, chainId, onLoadingChange } = props;
   const [items, setItems] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function CommentsSection(props: {
   const load = useCallback(async () => {
     try {
       setLoading(true);
+      onLoadingChange?.(true);
       const res = await fetch(
         `/api/community/comments?contractAddress=${contractAddress}&chainId=${chainId}&limit=20&offset=0`,
         { cache: "no-store" }
@@ -55,8 +58,9 @@ export function CommentsSection(props: {
       setError((e as Error).message);
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
-  }, [contractAddress, chainId]);
+  }, [contractAddress, chainId, onLoadingChange]);
 
   useEffect(() => {
     if (contractAddress && chainId) {
@@ -108,8 +112,8 @@ export function CommentsSection(props: {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
             <div className="flex items-center gap-2">
               {isConnected && wagmiAddress ? (
-                <div className="px-3 py-2 bg-gray-900 text-neon-blue rounded border border-gray-700 font-mono text-xs break-all">
-                  {wagmiAddress}
+                <div className="px-3 py-2 bg-gray-900 text-neon-blue rounded border border-gray-700 font-mono text-xs">
+                  {shortenAddress(wagmiAddress)}
                 </div>
               ) : (
                 <button
@@ -129,9 +133,12 @@ export function CommentsSection(props: {
             <button
               onClick={submit}
               disabled={!message || !wagmiAddress || loading}
-              className="px-3 py-2 bg-neon-purple/30 border border-neon-purple text-neon-purple rounded disabled:opacity-50"
+              className="px-3 py-2 bg-neon-purple/30 border border-neon-purple text-neon-purple rounded disabled:opacity-50 flex items-center gap-2"
             >
-              Submit
+              {loading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-neon-purple border-t-transparent"></div>
+              )}
+              {loading ? "Submitting..." : "Submit"}
             </button>
           </div>
           <textarea
@@ -145,7 +152,14 @@ export function CommentsSection(props: {
         </div>
 
         <div className="space-y-3">
-          {loading && <div className="text-gray-400">Loading comments...</div>}
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center space-y-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-neon-blue border-t-transparent"></div>
+                <p className="text-gray-400 text-sm">Loading comments...</p>
+              </div>
+            </div>
+          )}
           {!loading && items.length === 0 && (
             <div className="text-gray-400">No comments yet.</div>
           )}
@@ -155,8 +169,8 @@ export function CommentsSection(props: {
               className="p-3 bg-black/30 rounded-lg border border-gray-700"
             >
               <div className="flex items-center justify-between text-sm mb-2">
-                <div className="text-neon-blue font-mono break-all">
-                  {c.author.displayName || c.author.address}
+                <div className="text-neon-blue font-mono">
+                  {c.author.displayName || shortenAddress(c.author.address)}
                 </div>
                 <div className="text-gray-400">
                   {new Date(c.createdAt).toLocaleString()}
