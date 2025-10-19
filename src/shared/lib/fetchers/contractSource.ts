@@ -51,35 +51,36 @@ export interface ContractSource {
 // Union type for both results
 export type ContractAnalysisResult = ContractSource | RiskAnalysisResult;
 
-// Sourcify response interface
-interface SourcifyResponse {
-  status: "OK" | "NOT_FOUND";
-  files: Array<{
-    name: string;
-    content: string;
+// Sourcify API v2 response interface
+interface SourcifyV2Response {
+  match: "match" | "exact_match" | null;
+  creationMatch: "match" | "exact_match" | null;
+  runtimeMatch: "match" | "exact_match" | null;
+  chainId: string;
+  address: string;
+  verifiedAt?: string;
+  sources?: Record<string, string>;
+  abi?: Array<{
+    type: string;
+    name?: string;
+    inputs?: Array<{
+      name: string;
+      type: string;
+      indexed?: boolean;
+    }>;
+    outputs?: Array<{
+      name: string;
+      type: string;
+    }>;
+    stateMutability?: string;
+    anonymous?: boolean;
   }>;
-  metadata: {
-    compiler: {
-      version: string;
-    };
-    language: string;
-    output: {
-      abi: Array<{
-        type: string;
-        name?: string;
-        inputs?: Array<{
-          name: string;
-          type: string;
-          indexed?: boolean;
-        }>;
-        outputs?: Array<{
-          name: string;
-          type: string;
-        }>;
-        stateMutability?: string;
-        anonymous?: boolean;
-      }>;
-    };
+  compilation?: {
+    language?: string;
+    compiler?: string;
+    compilerVersion?: string;
+    name?: string;
+    fullyQualifiedName?: string;
   };
 }
 
@@ -104,73 +105,67 @@ interface EtherscanResponse {
   }>;
 }
 
-// Fetch from Sourcify (primary source)
+// Fetch from Sourcify (primary source) - Updated to use API v2
 export async function fetchFromSourcify(
   chainId: number,
   address: string
 ): Promise<ContractSource | null> {
   try {
     const addrLower = address.toLowerCase();
-    console.log(`[Sourcify] Try full`, { chainId, address: addrLower });
-    // Try full verification first
-    const fullUrl = `https://repo.sourcify.dev/contracts/full/${chainId}/${addrLower}/metadata.json`;
+    console.log(`[Sourcify] Try API v2`, { chainId, address: addrLower });
+    
+    // Use new Sourcify API v2
+    const apiUrl = `https://sourcify.dev/server/v2/contract/${chainId}/${addrLower}?fields=sources,abi,compilation`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout
 
-    const fullResponse = await fetch(fullUrl, {
+    const response = await fetch(apiUrl, {
       signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+      },
     });
     clearTimeout(timeoutId);
 
-    console.log(`[Sourcify] Full response`, {
-      ok: fullResponse.ok,
-      status: fullResponse.status,
+    console.log(`[Sourcify] API v2 response`, {
+      ok: response.ok,
+      status: response.status,
     });
-    if (fullResponse.ok) {
-      const data: SourcifyResponse = await fullResponse.json();
+
+    // Handle both 200 and 404 responses (404 means not verified)
+    if (response.ok || response.status === 404) {
+      const data = await response.json();
+      
+      // Check if contract is verified (has match status)
+      if (data.match === null || data.match === undefined) {
+        console.log(`[Sourcify] Contract not verified on Sourcify`);
+        return null;
+      }
+
+      // Extract sources and compilation info
+      const sources = data.sources || {};
+      const compilation = data.compilation || {};
+      const abi = data.abi || [];
+
+      // Convert sources to files array
+      const files = Object.entries(sources).map(([path, content]) => ({
+        path,
+        content: content as string,
+      }));
+
+      if (files.length === 0) {
+        console.log(`[Sourcify] No source files found`);
+        return null;
+      }
 
       return {
         verified: true,
         chainId,
         address: addrLower,
-        contractName: data.files[0]?.name?.replace(".sol", ""),
-        compilerVersion: data.metadata.compiler.version,
-        files: data.files.map((file) => ({
-          path: file.name,
-          content: file.content,
-        })),
-        abi: data.metadata.output.abi,
-      };
-    }
-
-    // Try partial verification
-    const partialUrl = `https://repo.sourcify.dev/contracts/partial/${chainId}/${addrLower}/metadata.json`;
-    const partialController = new AbortController();
-    const partialTimeoutId = setTimeout(() => partialController.abort(), 5000);
-
-    const partialResponse = await fetch(partialUrl, {
-      signal: partialController.signal,
-    });
-    clearTimeout(partialTimeoutId);
-
-    console.log(`[Sourcify] Partial response`, {
-      ok: partialResponse.ok,
-      status: partialResponse.status,
-    });
-    if (partialResponse.ok) {
-      const data: SourcifyResponse = await partialResponse.json();
-
-      return {
-        verified: true,
-        chainId,
-        address: addrLower,
-        contractName: data.files[0]?.name?.replace(".sol", ""),
-        compilerVersion: data.metadata.compiler.version,
-        files: data.files.map((file) => ({
-          path: file.name,
-          content: file.content,
-        })),
-        abi: data.metadata.output.abi,
+        contractName: compilation.name || files[0]?.path?.replace(/\.(sol|vy)$/, ""),
+        compilerVersion: compilation.compilerVersion,
+        files,
+        abi,
       };
     }
 
@@ -195,12 +190,15 @@ export async function fetchFromEtherscan(
     const chain = getChainById(chainId);
     if (!chain) return null;
 
-    const url = `${chain.etherscan}/api?module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`;
+    const url = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(url, {
       signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+      },
     });
     clearTimeout(timeoutId);
 
