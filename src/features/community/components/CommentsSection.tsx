@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { shortenAddress } from "../../../shared/lib/utils";
 
@@ -11,6 +11,10 @@ type CommentItem = {
   createdAt: string;
   moderation: { status: "pending" | "approved" | "rejected" };
   artifacts?: Array<{ type: string; cid: string; title?: string }>;
+  score?: number;
+  repliesCount?: number;
+  replies?: CommentItem[];
+  extra?: { userVote?: number };
 };
 
 export function CommentsSection(props: {
@@ -26,6 +30,11 @@ export function CommentsSection(props: {
   const [displayName, setDisplayName] = useState("");
   const { address: wagmiAddress, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
+  const viewer = useMemo(() => (wagmiAddress ? wagmiAddress : undefined), [wagmiAddress]);
+  const [pendingIds, setPendingIds] = useState<Record<string, boolean>>({});
+  const [replyOpen, setReplyOpen] = useState<Record<string, boolean>>({});
+  const [replyText, setReplyText] = useState<Record<string, string>>({});
+  const [sortBy, setSortBy] = useState<"new" | "top">("new");
 
   function connectWallet() {
     const injected = connectors.find((c) => c.id === "injected");
@@ -36,20 +45,37 @@ export function CommentsSection(props: {
     try {
       setLoading(true);
       onLoadingChange?.(true);
-      const res = await fetch(
-        `/api/community/comments?contractAddress=${contractAddress}&chainId=${chainId}&limit=20&offset=0`,
-        { cache: "no-store" }
-      );
+      const params = new URLSearchParams({
+        contractAddress,
+        chainId: String(chainId),
+        limit: "20",
+        offset: "0",
+        includeReplies: "true",
+      });
+      if (viewer) params.set("viewer", viewer);
+      const res = await fetch(`/api/community/comments?${params.toString()}`, { cache: "no-store" });
       const json: {
         success: boolean;
         data?: { items: CommentItem[]; total: number; hasMore: boolean };
         error?: string;
       } = await res.json();
       if (res.ok && json.success) {
-        const items = (json.data?.items || []).map((c: CommentItem) => ({
+        let items = (json.data?.items || []).map((c: CommentItem) => ({
           ...c,
           createdAt: new Date(c.createdAt).toISOString(),
+          replies: (c.replies || []).map((r: any) => ({
+            ...r,
+            createdAt: new Date(r.createdAt).toISOString(),
+          })),
         }));
+        // client-side sort
+        if (sortBy === "top") {
+          items = items.sort((a, b) => (b.score || 0) - (a.score || 0));
+        } else {
+          items = items.sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        }
         setItems(items);
       } else {
         setError(json.error || "Failed to load comments");
@@ -60,7 +86,7 @@ export function CommentsSection(props: {
       setLoading(false);
       onLoadingChange?.(false);
     }
-  }, [contractAddress, chainId, onLoadingChange]);
+  }, [contractAddress, chainId, onLoadingChange, viewer, sortBy]);
 
   useEffect(() => {
     if (contractAddress && chainId) {
@@ -70,33 +96,141 @@ export function CommentsSection(props: {
 
   // wagmi manages account state; no manual detection necessary
 
+  async function signAndSend(action: string, ref: string, body: Record<string, unknown>) {
+    if (!wagmiAddress) throw new Error("Connect wallet first");
+    const nonceResp = await fetch("/api/auth/nonce", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: wagmiAddress }),
+    });
+    const nonceJson = await nonceResp.json();
+    if (!nonceResp.ok || !nonceJson.success) throw new Error(nonceJson.error || "Nonce failed");
+    const nonce = nonceJson.data.nonce as string;
+    const timestamp = Date.now();
+    const msg = [
+      "Owdit Sign:",
+      `action:${action}`,
+      `addr:${wagmiAddress.toLowerCase()}`,
+      `ref:${ref}`,
+      `ts:${timestamp}`,
+      `nonce:${nonce}`,
+    ].join("\n");
+    const signature = await (window as any).ethereum.request({
+      method: "personal_sign",
+      params: [msg, wagmiAddress],
+    });
+    return { ...body, address: wagmiAddress, signature, nonce, timestamp };
+  }
+
   async function submit() {
     try {
       setError(null);
+      const payload = await signAndSend("comment", contractAddress.toLowerCase(), {
+        contractAddress,
+        chainId,
+        message,
+        author: { address: wagmiAddress || "", displayName },
+        moderation: { status: "approved" },
+      });
       const resp = await fetch(`/api/community/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contractAddress,
-          chainId,
-          message,
-          author: { address: wagmiAddress || "", displayName },
-          moderation: { status: "pending" },
-        }),
+        body: JSON.stringify(payload),
       });
-      const json: { success: boolean; data?: CommentItem; error?: string } =
-        await resp.json();
-      if (!resp.ok || !json.success)
-        throw new Error(json.error || "Create failed");
+      const json: { success: boolean; data?: CommentItem; error?: string } = await resp.json();
+      if (!resp.ok || !json.success) throw new Error(json.error || "Create failed");
       setMessage("");
-      // Optimistic state update: show the created comment immediately
       if (json.data) {
         const created: CommentItem = {
           ...json.data,
-          createdAt: new Date(json.data.createdAt).toISOString(),
-        };
+          createdAt: new Date((json.data as any).createdAt).toISOString(),
+        } as any;
         setItems((prev) => [created, ...prev]);
       }
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function toggleVote(commentId: string, value: 1 | -1) {
+    if (!wagmiAddress) return connectWallet();
+    try {
+      setPendingIds((p) => ({ ...p, [commentId]: true }));
+      const current = items.find((i) => i._id === commentId);
+      const currentVote = current?.extra?.userVote || 0;
+      if (currentVote === value) {
+        const payload = await signAndSend("unvote", commentId, { commentId });
+        const res = await fetch(`/api/community/comments/unvote`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const j = await res.json();
+        if (!res.ok || !j.success) throw new Error(j.error || "Unvote failed");
+        const delta = j.data.delta as number;
+        setItems((prev) =>
+          prev.map((c) =>
+            c._id === commentId
+              ? { ...c, score: (c.score || 0) + delta, extra: { ...(c.extra || {}), userVote: 0 } }
+              : c
+          )
+        );
+        return;
+      }
+      const payload = await signAndSend("vote", commentId, { commentId, value });
+      const res = await fetch(`/api/community/comments/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || "Vote failed");
+      const delta = j.data.delta as number;
+      const newVal = j.data.value as 1 | -1;
+      setItems((prev) =>
+        prev.map((c) =>
+          c._id === commentId
+            ? { ...c, score: (c.score || 0) + delta, extra: { ...(c.extra || {}), userVote: newVal } }
+            : c
+        )
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPendingIds((p) => ({ ...p, [commentId]: false }));
+    }
+  }
+
+  async function submitReply(parentId: string) {
+    if (!replyText[parentId]) return;
+    try {
+      const payload = await signAndSend("reply", parentId, {
+        parentId,
+        chainId,
+        contractAddress,
+        content: replyText[parentId],
+      });
+      const res = await fetch(`/api/community/comments/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || "Reply failed");
+      const created: CommentItem = { ...(j.data as any), createdAt: new Date(j.data.createdAt).toISOString() };
+      setItems((prev) =>
+        prev.map((c) =>
+          c._id === parentId
+            ? {
+                ...c,
+                repliesCount: (c.repliesCount || 0) + 1,
+                replies: [...(c.replies || []), created],
+              }
+            : c
+        )
+      );
+      setReplyText((t) => ({ ...t, [parentId]: "" }));
+      setReplyOpen((o) => ({ ...o, [parentId]: false }));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -151,6 +285,21 @@ export function CommentsSection(props: {
           {error && <div className="mt-2 text-sm text-red-400">{error}</div>}
         </div>
 
+        <div className="flex items-center gap-3 text-sm">
+          <button
+            onClick={() => setSortBy("new")}
+            className={`px-3 py-1 rounded border ${sortBy === "new" ? "border-neon-blue text-neon-blue" : "border-gray-700 text-gray-300"}`}
+          >
+            New
+          </button>
+          <button
+            onClick={() => setSortBy("top")}
+            className={`px-3 py-1 rounded border ${sortBy === "top" ? "border-neon-purple text-neon-purple" : "border-gray-700 text-gray-300"}`}
+          >
+            Top
+          </button>
+        </div>
+
         <div className="space-y-3">
           {loading && (
             <div className="flex items-center justify-center py-8">
@@ -164,10 +313,7 @@ export function CommentsSection(props: {
             <div className="text-gray-400">No comments yet.</div>
           )}
           {items.map((c) => (
-            <div
-              key={c._id}
-              className="p-3 bg-black/30 rounded-lg border border-gray-700"
-            >
+            <div key={c._id} className="p-3 bg-black/30 rounded-lg border border-gray-700">
               <div className="flex items-center justify-between text-sm mb-2">
                 <div className="text-neon-blue font-mono">
                   {c.author.displayName || shortenAddress(c.author.address)}
@@ -194,6 +340,66 @@ export function CommentsSection(props: {
                       </a>
                     </div>
                   ))}
+                </div>
+              )}
+              <div className="mt-3 flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleVote(c._id, 1)}
+                    disabled={!!pendingIds[c._id]}
+                    className={`px-2 py-1 rounded border ${(c.extra?.userVote || 0) === 1 ? "border-neon-green text-neon-green" : "border-gray-700 text-gray-300 hover:text-neon-green"}`}
+                  >
+                    ▲
+                  </button>
+                  <span className="min-w-[2rem] text-center text-gray-200">{c.score ?? 0}</span>
+                  <button
+                    onClick={() => toggleVote(c._id, -1)}
+                    disabled={!!pendingIds[c._id]}
+                    className={`px-2 py-1 rounded border ${(c.extra?.userVote || 0) === -1 ? "border-neon-pink text-neon-pink" : "border-gray-700 text-gray-300 hover:text-neon-pink"}`}
+                  >
+                    ▼
+                  </button>
+                </div>
+                <button
+                  onClick={() => setReplyOpen((o) => ({ ...o, [c._id]: !o[c._id] }))}
+                  className="px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white"
+                >
+                  Reply{c.repliesCount ? ` (${c.repliesCount})` : ""}
+                </button>
+              </div>
+              {replyOpen[c._id] && (
+                <div className="mt-3 p-3 bg-gray-900 rounded border border-gray-700">
+                  <textarea
+                    value={replyText[c._id] || ""}
+                    onChange={(e) => setReplyText((t) => ({ ...t, [c._id]: e.target.value }))}
+                    rows={2}
+                    placeholder="Write a reply..."
+                    className="w-full px-3 py-2 bg-black text-white rounded border border-gray-700 focus:outline-none focus:border-neon-blue"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => submitReply(c._id)}
+                      disabled={!replyText[c._id] || !wagmiAddress}
+                      className="px-3 py-1 rounded bg-neon-blue/20 border border-neon-blue text-neon-blue disabled:opacity-50"
+                    >
+                      Send Reply
+                    </button>
+                  </div>
+                  {c.replies && c.replies.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {c.replies.map((r) => (
+                        <div key={r._id} className="p-2 bg-black/40 rounded border border-gray-700">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <div className="text-neon-blue font-mono">
+                              {r.author.displayName || shortenAddress(r.author.address)}
+                            </div>
+                            <div className="text-gray-500">{new Date(r.createdAt).toLocaleString()}</div>
+                          </div>
+                          <div className="text-gray-200 whitespace-pre-wrap">{r.message}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

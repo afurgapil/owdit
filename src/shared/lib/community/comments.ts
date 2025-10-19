@@ -30,6 +30,7 @@ export interface CommunityComment {
   _id: string; // `${contractAddress.toLowerCase()}:${chainId}:${commentId}` or UUID
   contractAddress: string; // checksum not enforced here; normalize to lower
   chainId: number;
+  parentId?: string; // undefined for top-level; set for replies
   message: string;
   artifacts?: CommentArtifact[];
   author: {
@@ -43,6 +44,8 @@ export interface CommunityComment {
   reputation?: ReputationSnapshot;
   // Extensible map for future additions (e.g., votes, tags)
   extra?: Record<string, unknown>;
+  score?: number; // denormalized vote score
+  repliesCount?: number; // denormalized number of replies
 }
 
 interface MongoConnection {
@@ -51,9 +54,24 @@ interface MongoConnection {
   collection: Collection<CommunityComment>;
 }
 
+// Votes
+export interface CommunityVote {
+  _id: string; // `${commentId}:${voter}`
+  commentId: string;
+  voter: string; // lowercased address
+  value: 1 | -1;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface VotesConnection {
+  collection: Collection<CommunityVote>;
+}
+
 export class CommunityCommentsService {
   private static instance: CommunityCommentsService;
   private connection: MongoConnection | null = null;
+  private votes: VotesConnection | null = null;
 
   private constructor() {}
 
@@ -80,10 +98,12 @@ export class CommunityCommentsService {
 
     const db = client.db("owdit");
     const collection = db.collection<CommunityComment>("community_comments");
+    const votesCollection = db.collection<CommunityVote>("community_votes");
 
     // Indexes for query patterns
     const indexes: Document[] = [
       { contractAddress: 1, chainId: 1, createdAt: -1 },
+      { parentId: 1, createdAt: 1 },
       { "author.address": 1, createdAt: -1 },
       { "moderation.status": 1, createdAt: -1 },
       { createdAt: -1 },
@@ -92,7 +112,13 @@ export class CommunityCommentsService {
       await (collection as unknown as Collection<Document>).createIndex(keyDoc);
     }
 
+    await (votesCollection as unknown as Collection<Document>).createIndex(
+      { commentId: 1, voter: 1 },
+      { unique: true } as any
+    );
+
     this.connection = { client, db, collection };
+    this.votes = { collection: votesCollection };
   }
 
   private buildId(
@@ -118,8 +144,22 @@ export class CommunityCommentsService {
       _id,
       createdAt: now,
       updatedAt: now,
+      score: comment.score ?? 0,
+      repliesCount: comment.repliesCount ?? 0,
     };
+    // Normalize fields to ensure query matches
+    doc.contractAddress = doc.contractAddress.toLowerCase();
+    if (doc.author?.address) {
+      doc.author.address = doc.author.address.toLowerCase();
+    }
     await this.connection!.collection.insertOne(doc);
+    // if reply, bump parent's repliesCount
+    if (doc.parentId) {
+      await this.connection!.collection.updateOne(
+        { _id: doc.parentId },
+        { $inc: { repliesCount: 1 }, $set: { updatedAt: new Date() } }
+      );
+    }
     return doc;
   }
 
@@ -129,21 +169,116 @@ export class CommunityCommentsService {
     limit?: number;
     offset?: number;
     status?: ModerationInfo["status"];
+    includeReplies?: boolean;
+    authorAddress?: string; // to compute userVote
   }): Promise<{ items: CommunityComment[]; total: number; hasMore: boolean }> {
     if (!this.connection) await this.connect();
     const { contractAddress, chainId, limit = 20, offset = 0, status } = params;
+    const lower = contractAddress.toLowerCase();
     const query: Record<string, unknown> = {
-      contractAddress: contractAddress.toLowerCase(),
+      // Case-insensitive match to include legacy mixed-case records
+      contractAddress: { $regex: `^${lower}$`, $options: "i" },
       chainId,
+      parentId: { $exists: false },
     };
     if (status) query["moderation.status"] = status;
     const total = await this.connection!.collection.countDocuments(query);
-    const items = await this.connection!.collection.find(query)
+    const items = await this.connection!.collection
+      .find(query)
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit)
       .toArray();
-    return { items, total, hasMore: offset + limit < total };
+    // attach vote score and optionally userVote, and replies count already denormalized
+    const withScores = await Promise.all(
+      items.map(async (c) => {
+        const score = await this.getScore(c._id);
+        const userVote = params.authorAddress
+          ? await this.getUserVote(c._id, params.authorAddress)
+          : 0;
+        return { ...c, score, extra: { ...c.extra, userVote } } as CommunityComment;
+      })
+    );
+    return { items: withScores, total, hasMore: offset + limit < total };
+  }
+
+  public async listReplies(parentId: string): Promise<CommunityComment[]> {
+    if (!this.connection) await this.connect();
+    const items = await this.connection!.collection
+      .find({ parentId })
+      .sort({ createdAt: 1 })
+      .toArray();
+    const withScores = await Promise.all(
+      items.map(async (c) => ({ ...c, score: await this.getScore(c._id) }))
+    );
+    return withScores;
+  }
+
+  // Votes
+  public async upsertVote(
+    commentId: string,
+    voter: string,
+    value: 1 | -1
+  ): Promise<{ newValue: 1 | -1; delta: number }> {
+    if (!this.votes) await this.connect();
+    const lower = voter.toLowerCase();
+    const _id = `${commentId}:${lower}`;
+    const now = new Date();
+    const existing = await this.votes!.collection.findOne({ _id });
+    if (existing) {
+      if (existing.value === value) return { newValue: value, delta: 0 };
+      await this.votes!.collection.updateOne(
+        { _id },
+        { $set: { value, updatedAt: now } }
+      );
+      await this.connection!.collection.updateOne(
+        { _id: commentId },
+        { $inc: { score: value - existing.value } }
+      );
+      return { newValue: value, delta: value - existing.value };
+    }
+    await this.votes!.collection.insertOne({
+      _id,
+      commentId,
+      voter: lower,
+      value,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await this.connection!.collection.updateOne(
+      { _id: commentId },
+      { $inc: { score: value } }
+    );
+    return { newValue: value, delta: value };
+  }
+
+  public async removeVote(
+    commentId: string,
+    voter: string
+  ): Promise<{ removed: boolean; delta: number }> {
+    if (!this.votes) await this.connect();
+    const lower = voter.toLowerCase();
+    const _id = `${commentId}:${lower}`;
+    const existing = await this.votes!.collection.findOne({ _id });
+    if (!existing) return { removed: false, delta: 0 };
+    await this.votes!.collection.deleteOne({ _id });
+    await this.connection!.collection.updateOne(
+      { _id: commentId },
+      { $inc: { score: -existing.value } }
+    );
+    return { removed: true, delta: -existing.value };
+  }
+
+  public async getUserVote(commentId: string, voter: string): Promise<1 | -1 | 0> {
+    if (!this.votes) await this.connect();
+    const res = await this.votes!.collection.findOne({ _id: `${commentId}:${voter.toLowerCase()}` });
+    return res ? res.value : 0;
+  }
+
+  public async getScore(commentId: string): Promise<number> {
+    if (!this.connection) await this.connect();
+    const found = await this.connection!.collection.findOne({ _id: commentId }, { projection: { score: 1 } });
+    return found?.score ?? 0;
   }
 
   public async updateModeration(

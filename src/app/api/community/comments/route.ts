@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  communityCommentSchema,
-  moderationInfoSchema,
-} from "../../../../shared/lib/zodSchemas";
+import { communityCommentSchema, moderationInfoSchema } from "../../../../shared/lib/zodSchemas";
 import { communityComments } from "../../../../shared/lib/community/comments";
+import { z } from "zod";
+import { buildSignMessage, consumeNonce, verifySignature } from "../../../../shared/lib/auth/signature";
 
 // Simple in-memory rate limit per IP
 const RATE_LIMIT_WINDOW_MS = 10_000; // 10s
@@ -27,6 +26,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
     const chainId = parseInt(searchParams.get("chainId") || "1");
+    const includeReplies = searchParams.get("includeReplies") === "true";
+    const viewer = searchParams.get("viewer"); // optional wallet to compute userVote
     const status = searchParams.get("status") as
       | "pending"
       | "approved"
@@ -48,12 +49,20 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       status: status || undefined,
+      includeReplies,
+      authorAddress: viewer || undefined,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: { items, total, hasMore },
-    });
+    if (!includeReplies) {
+      return NextResponse.json({ success: true, data: { items, total, hasMore } });
+    }
+
+    // Fetch replies for each parent (basic, could be paginated later)
+    const itemsWithReplies = await Promise.all(
+      items.map(async (c) => ({ ...c, replies: await communityComments.listReplies(c._id) }))
+    );
+
+    return NextResponse.json({ success: true, data: { items: itemsWithReplies, total, hasMore } });
   } catch (error) {
     console.error("Community Comments GET error:", error);
     return NextResponse.json(
@@ -74,11 +83,37 @@ export async function POST(request: NextRequest) {
     }
 
     const raw = await request.json();
-    // Validate base payload
-    const parsed = communityCommentSchema.parse(raw);
+    // Accept legacy schema but enforce signature envelope
+    const Base = communityCommentSchema;
+    const Envelope = z.object({
+      address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+      signature: z.string().min(1),
+      nonce: z.string().min(1),
+      timestamp: z.number().int().positive(),
+    });
+    const parsed = Base.parse(raw);
+    const env = Envelope.parse(raw);
 
-    // Optional: verify signature (placeholder for EIP-191/SiWE)
-    // if (parsed.signature) { verifySignature(parsed) }
+    // Verify signature: top-level comments sign the contract address as ref
+    const message = buildSignMessage({
+      action: "comment",
+      address: env.address,
+      ref: parsed.contractAddress.toLowerCase(),
+      timestamp: env.timestamp,
+      nonce: env.nonce,
+    });
+    if (!verifySignature(message, env.signature, env.address)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid signature" },
+        { status: 401 }
+      );
+    }
+    if (!consumeNonce(env.address, env.nonce)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or expired nonce" },
+        { status: 401 }
+      );
+    }
 
     const created = await communityComments.create({
       _id: parsed._id,
@@ -86,11 +121,13 @@ export async function POST(request: NextRequest) {
       chainId: parsed.chainId,
       message: parsed.message,
       artifacts: parsed.artifacts,
-      author: parsed.author,
-      signature: parsed.signature,
+      author: { address: env.address.toLowerCase(), displayName: parsed.author?.displayName },
+      signature: env.signature,
       moderation: moderationInfoSchema.parse(parsed.moderation),
       reputation: parsed.reputation,
       extra: parsed.extra,
+      score: 0,
+      repliesCount: 0,
     });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });

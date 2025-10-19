@@ -1,3 +1,4 @@
+"use client";
 import { Clock, MessageCircle, ChevronDown, ChevronUp, Copy, Check, Eye, User, Activity } from "lucide-react";
 import { formatTimestamp, shortenAddress } from "../../../shared/lib/utils";
 import { CommentsSection } from "../../community/components/CommentsSection";
