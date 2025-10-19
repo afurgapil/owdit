@@ -220,3 +220,27 @@ export interface AnalysisMilestone {
   estimatedDuration: number; // seconds
   dependencies?: string[]; // milestone IDs that must complete first
 }
+
+// Test Generation Types
+export interface TestGenerationRequest {
+  contractCode: string;
+  contractName: string;
+  testFrameworks: ('hardhat' | 'foundry')[];
+}
+
+export interface TestGenerationResult {
+  success: boolean;
+  tests: {
+    hardhat?: {
+      testFile: string;
+      setupFile: string;
+    };
+    foundry?: {
+      testFile: string;
+    };
+  };
+  coverage: {
+    functionsCount: number;
+    testCasesCount: number;
+  };
+}

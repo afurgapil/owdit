@@ -12,12 +12,14 @@ import {
   AlertTriangle,
   FolderOpen,
   Github,
+  TestTube,
 } from "lucide-react";
 import { MatrixRain } from "../../shared/components/MatrixRain";
 import MultiFileUpload from "../../features/developers/components/MultiFileUpload";
 import GitHubImport from "../../features/developers/components/GitHubImport";
 import ImportResolver from "../../features/developers/components/ImportResolver";
-import { MultiFileAnalysis } from "../../types/contractAnalysis";
+import TestGeneration from "../../features/developers/components/TestGeneration";
+import { MultiFileAnalysis, TestGenerationResult } from "../../types/contractAnalysis";
 
 interface AnalysisResult {
   score: number;
@@ -46,15 +48,17 @@ interface AnalysisResult {
   };
 }
 
-type AnalysisMode = 'single' | 'multi-file' | 'github';
+type AnalysisMode = 'single' | 'multi-file' | 'github' | 'test-generation';
 
 export default function ContractAnalyzer() {
   const [mode, setMode] = useState<AnalysisMode>('single');
   const [code, setCode] = useState("");
+  const [contractName, setContractName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [multiFileResult, setMultiFileResult] = useState<MultiFileAnalysis | null>(null);
+  const [testResult, setTestResult] = useState<TestGenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -89,6 +93,7 @@ export default function ContractAnalyzer() {
     } else if (mode === 'github') {
       await handleGitHubAnalysis();
     }
+    // Note: test-generation mode has its own handler called directly from TestGeneration component
   };
 
   const handleSingleFileAnalysis = async () => {
@@ -222,6 +227,42 @@ export default function ContractAnalyzer() {
     }
   };
 
+  const handleTestGeneration = async (contractCode: string, contractName: string, frameworks: ('hardhat' | 'foundry')[]): Promise<TestGenerationResult> => {
+    setIsAnalyzing(true);
+    setError(null);
+    setTestResult(null);
+
+    try {
+      const response = await fetch("/api/contract-analysis/generate-tests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contractCode,
+          contractName,
+          testFrameworks: frameworks,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setTestResult(data);
+        return data;
+      } else {
+        setError(data.error || "Test generation failed");
+        throw new Error(data.error || "Test generation failed");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Network error occurred during test generation";
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const detectLanguage = (code: string): string => {
     if (code.includes("pragma solidity") || code.includes("contract ")) {
       return "solidity";
@@ -320,6 +361,17 @@ export default function ContractAnalyzer() {
                 <Github className="h-4 w-4" />
                 <span>GitHub Import</span>
               </button>
+              <button
+                onClick={() => setMode('test-generation')}
+                className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
+                  mode === 'test-generation'
+                    ? 'bg-gradient-to-r from-neon-cyan to-neon-blue text-white shadow-lg shadow-neon-cyan/30'
+                    : 'text-gray-300 hover:text-white hover:bg-neon-cyan/20'
+                }`}
+              >
+                <TestTube className="h-4 w-4" />
+                <span>Test Generation</span>
+              </button>
             </div>
           </div>
         </div>
@@ -332,6 +384,7 @@ export default function ContractAnalyzer() {
               {mode === 'single' && 'Contract Code'}
               {mode === 'multi-file' && 'Multi-File Upload'}
               {mode === 'github' && 'GitHub Repository'}
+              {mode === 'test-generation' && 'Test Generation'}
             </h2>
 
             {/* Single File Mode */}
@@ -424,15 +477,23 @@ contract MyContract {
               </div>
             )}
 
-            {/* Analyze Button */}
-            <button
-              onClick={handleAnalyze}
-              disabled={
-                isAnalyzing || 
-                (mode === 'single' && !code.trim()) ||
-                (mode === 'multi-file' && multiFiles.length === 0) ||
-                (mode === 'github' && selectedGithubFiles.length === 0)
-              }
+            {/* Test Generation Mode */}
+            {mode === 'test-generation' && (
+              <TestGeneration
+                onGenerate={handleTestGeneration}
+              />
+            )}
+
+            {/* Analyze Button - Only show for non-test-generation modes */}
+            {mode !== 'test-generation' && (
+              <button
+                onClick={handleAnalyze}
+                disabled={
+                  isAnalyzing || 
+                  (mode === 'single' && !code.trim()) ||
+                  (mode === 'multi-file' && multiFiles.length === 0) ||
+                  (mode === 'github' && selectedGithubFiles.length === 0)
+                }
               className="w-full flex items-center justify-center px-8 py-4 bg-gradient-to-r from-neon-cyan to-neon-blue hover:from-neon-cyan/80 hover:to-neon-blue/80 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold text-lg rounded-xl transition-all duration-300 disabled:cursor-not-allowed hover:shadow-2xl hover:shadow-neon-cyan/30 transform hover:scale-105 disabled:transform-none border-2 border-neon-cyan/50 hover:border-neon-cyan shadow-lg"
             >
               {isAnalyzing ? (
@@ -451,6 +512,7 @@ contract MyContract {
                 </>
               )}
             </button>
+            )}
 
             {error && (
               <div className="mt-4 p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
@@ -466,13 +528,14 @@ contract MyContract {
               Analysis Results
             </h2>
 
-            {!result && !multiFileResult ? (
+            {!result && !multiFileResult && !testResult ? (
               <div className="text-center text-gray-400 py-12">
                 <Brain className="mx-auto mb-4" size={48} />
                 <p className="text-lg mb-2">
                   {mode === 'single' && 'Upload or paste your contract code to get started'}
                   {mode === 'multi-file' && 'Upload multiple files to analyze them together'}
                   {mode === 'github' && 'Import a GitHub repository to analyze its contracts'}
+                  {mode === 'test-generation' && 'Paste your contract code to generate comprehensive unit tests'}
                 </p>
                 <p className="text-sm text-gray-500">
                   Powered by 0G AI • Up to 120 seconds analysis time
@@ -879,6 +942,16 @@ contract MyContract {
                     ))}
                   </div>
                 </div>
+              </div>
+            ) : testResult ? (
+              <div className="text-center text-gray-400 py-12">
+                <TestTube className="mx-auto mb-4" size={48} />
+                <p className="text-lg mb-2">
+                  Test generation results are displayed in the input section
+                </p>
+                <p className="text-sm text-gray-500">
+                  Check the Test Generation tab for your generated tests
+                </p>
               </div>
             ) : null}
           </div>
