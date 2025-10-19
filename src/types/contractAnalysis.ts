@@ -157,6 +157,53 @@ export function isUnverifiedContract(
   return !data.verified && data.analysisType === "unverified";
 }
 
+// Multi-file Analysis Types
+export interface MultiFileAnalysis {
+  files: Array<{ path: string; content: string; size: number }>;
+  mainContract?: string; // primary contract name
+  dependencies: Record<string, string[]>; // import graph
+  combinedAnalysis: {
+    score: number;
+    securityIssues: SecurityIssue[];
+    gasOptimization: GasOptimization;
+    codeQuality: CodeQuality;
+    recommendations: Recommendation[];
+  };
+  individualFiles?: Array<{
+    path: string;
+    lineCount: number;
+    contractCount: number;
+    functionCount: number;
+  }>;
+}
+
+export interface SecurityIssue {
+  severity: "critical" | "high" | "medium" | "low";
+  issue: string;
+  description: string;
+  fix: string;
+}
+
+export interface GasOptimization {
+  current: number;
+  optimized: number;
+  savings: number;
+}
+
+export interface CodeQuality {
+  maintainability: number;
+  readability: number;
+  testability: number;
+}
+
+export interface Recommendation {
+  category: string;
+  priority: "high" | "medium" | "low";
+  title: string;
+  description: string;
+  suggestion: string;
+}
+
 // Analysis Progress Types
 export interface AnalysisProgress {
   step: string;

@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       // Set a timeout for 0G inference
       const timeoutPromise = new Promise<AIResult>(
         (_, reject) =>
-          setTimeout(() => reject(new Error("0G inference timeout")), 10000) // 10 seconds timeout
+          setTimeout(() => reject(new Error("0G inference timeout")), 120000) // 2 minutes timeout
       );
 
       const inferencePromise = inferRiskOn0G(features);

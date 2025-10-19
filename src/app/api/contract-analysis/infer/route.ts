@@ -22,6 +22,14 @@ const inferRequestSchema = z.object({
     compilerVersion: z.string().optional(),
     sourceCode: z.string().optional(),
     files: z.array(z.string()).optional(),
+    // Multi-file analysis fields
+    multiFile: z.boolean().optional(),
+    fileCount: z.number().optional(),
+    contractCount: z.number().optional(),
+    totalLines: z.number().optional(),
+    totalFunctions: z.number().optional(),
+    totalEvents: z.number().optional(),
+    mainContract: z.string().optional(),
   }),
   heuristic: z
     .object({
