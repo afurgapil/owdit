@@ -21,4 +21,3 @@ export function Layout({ children }: LayoutProps) {
     </Web3Provider>
   );
 }
-//TODO cüzdan bağlantısını kontrol et

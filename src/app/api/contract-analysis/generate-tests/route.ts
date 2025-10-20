@@ -6,19 +6,25 @@ import { genRequestId, logger } from "../../../../shared/lib/logger";
 const testGenerationRequestSchema = z.object({
   contractCode: z.string().min(1, "Contract code is required"),
   contractName: z.string().min(1, "Contract name is required"),
-  testFrameworks: z.array(z.enum(['hardhat', 'foundry'])).min(1, "At least one test framework must be selected"),
+  testFrameworks: z
+    .array(z.enum(["hardhat", "foundry"]))
+    .min(1, "At least one test framework must be selected"),
 });
 
 const testGenerationResponseSchema = z.object({
   success: z.boolean(),
   tests: z.object({
-    hardhat: z.object({
-      testFile: z.string(),
-      setupFile: z.string(),
-    }).optional(),
-    foundry: z.object({
-      testFile: z.string(),
-    }).optional(),
+    hardhat: z
+      .object({
+        testFile: z.string(),
+        setupFile: z.string(),
+      })
+      .optional(),
+    foundry: z
+      .object({
+        testFile: z.string(),
+      })
+      .optional(),
   }),
   coverage: z.object({
     functionsCount: z.number(),
@@ -37,7 +43,9 @@ export async function POST(request: NextRequest) {
 
     // Validate request body
     const validatedData = testGenerationRequestSchema.parse(body);
-    logger.info(`[${requestId}] Request validation successful for contract: ${validatedData.contractName}`);
+    logger.info(
+      `[${requestId}] Request validation successful for contract: ${validatedData.contractName}`
+    );
 
     // Check if 0G private key is configured
     if (!process.env.ZERO_G_PRIVATE_KEY) {
@@ -52,7 +60,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate tests using 0G inference
-    logger.info(`[${requestId}] Starting test generation for frameworks: ${validatedData.testFrameworks.join(', ')}`);
+    logger.info(
+      `[${requestId}] Starting test generation for frameworks: ${validatedData.testFrameworks.join(
+        ", "
+      )}`
+    );
     const testResult = await generateTestsOn0G({
       contractCode: validatedData.contractCode,
       contractName: validatedData.contractName,
@@ -60,13 +72,26 @@ export async function POST(request: NextRequest) {
     });
 
     if (!testResult.success) {
-      logger.error(`[${requestId}] Test generation failed: ${testResult.error}`);
+      logger.error(
+        `[${requestId}] Test generation failed: ${testResult.error}`
+      );
+
+      // Determine appropriate status code based on error type
+      let statusCode = 500;
+      if (
+        testResult.error?.includes("0G AI services are currently unavailable")
+      ) {
+        statusCode = 503; // Service Unavailable
+      } else if (testResult.error?.includes("timeout")) {
+        statusCode = 504; // Gateway Timeout
+      }
+
       return NextResponse.json(
         {
           success: false,
           error: testResult.error || "Test generation failed",
         },
-        { status: 500 }
+        { status: statusCode }
       );
     }
 
@@ -77,10 +102,11 @@ export async function POST(request: NextRequest) {
       coverage: testResult.coverage,
     });
 
-    logger.info(`[${requestId}] Test generation completed successfully. Functions: ${testResult.coverage.functionsCount}, Test cases: ${testResult.coverage.testCasesCount}`);
+    logger.info(
+      `[${requestId}] Test generation completed successfully. Functions: ${testResult.coverage.functionsCount}, Test cases: ${testResult.coverage.testCasesCount}`
+    );
 
     return NextResponse.json(validatedResponse);
-
   } catch (error) {
     logger.error(`[${requestId}] Test generation error:`, { error });
 
