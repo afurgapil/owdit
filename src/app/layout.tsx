@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Open_Sans, Raleway } from "next/font/google";
 import "./globals.css";
 import { Layout } from "../shared/components/Layout";
 import Script from "next/script";
-import { Analytics } from "../shared/components/Analytics";
+import ClientRoot from "./ClientRoot";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -83,8 +83,9 @@ export default function RootLayout({
             }
           `}
         </Script>
-        <Analytics />
-        <Layout>{children}</Layout>
+        <ClientRoot>
+          <Layout>{children}</Layout>
+        </ClientRoot>
       </body>
     </html>
   );
