@@ -1,3 +1,4 @@
+import React from "react";
 import { LucideIcon, CheckCircle } from "lucide-react";
 
 interface FeatureCardProps {

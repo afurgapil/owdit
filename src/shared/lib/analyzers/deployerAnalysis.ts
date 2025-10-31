@@ -48,15 +48,15 @@ export async function getContractCreationTransaction(
     if (!chain) return null;
 
     const url = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getcontractcreation&contractaddresses=${contractAddress}&apikey=${apiKey}`;
-    
+
     const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) return null;
 
     const data = await response.json();
-    
+
     if (data.status !== "1" || !data.result || data.result.length === 0) {
       return null;
     }
@@ -82,15 +82,15 @@ export async function getDeployerTransactions(
     if (!chain) return [];
 
     const url = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=txlist&address=${deployerAddress}&startblock=0&endblock=99999999&page=1&offset=${limit}&sort=desc&apikey=${apiKey}`;
-    
+
     const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) return [];
 
     const data = await response.json();
-    
+
     if (data.status !== "1" || !data.result) {
       return [];
     }
@@ -115,22 +115,22 @@ export async function getDeployerContractCreations(
     if (!chain) return [];
 
     const url = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=txlist&address=${deployerAddress}&startblock=0&endblock=99999999&page=1&offset=1000&sort=desc&apikey=${apiKey}`;
-    
+
     const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) return [];
 
     const data = await response.json();
-    
+
     if (data.status !== "1" || !data.result) {
       return [];
     }
 
     // Filter for contract creation transactions (to field is empty)
-    return data.result.filter((tx: EtherscanTransaction) => 
-      tx.to === "" && tx.contractAddress
+    return data.result.filter(
+      (tx: EtherscanTransaction) => tx.to === "" && tx.contractAddress
     );
   } catch (error) {
     logger.warn("Failed to get deployer contract creations", { error });
@@ -158,9 +158,11 @@ function calculateReputationScore(
   else score += 5;
 
   // Success rate factor
-  const successfulContracts = contractCreations.filter(tx => tx.isError === "0").length;
+  const successfulContracts = contractCreations.filter(
+    (tx) => tx.isError === "0"
+  ).length;
   const successRate = successfulContracts / contractCount;
-  
+
   if (successRate >= 0.9) score += 20;
   else if (successRate >= 0.7) score += 15;
   else if (successRate >= 0.5) score += 10;
@@ -174,9 +176,12 @@ function calculateReputationScore(
 
   // Time factor (older deployer = more established)
   if (contractCreations.length > 0) {
-    const firstDeploy = new Date(parseInt(contractCreations[contractCreations.length - 1].timeStamp) * 1000);
-    const daysSinceFirstDeploy = (Date.now() - firstDeploy.getTime()) / (1000 * 60 * 60 * 24);
-    
+    const firstDeploy = new Date(
+      parseInt(contractCreations[contractCreations.length - 1].timeStamp) * 1000
+    );
+    const daysSinceFirstDeploy =
+      (Date.now() - firstDeploy.getTime()) / (1000 * 60 * 60 * 24);
+
     if (daysSinceFirstDeploy >= 365) score += 10;
     else if (daysSinceFirstDeploy >= 90) score += 5;
     else if (daysSinceFirstDeploy < 30) score -= 15;
@@ -196,19 +201,24 @@ function identifyRiskIndicators(
 
   // New wallet (less than 30 days)
   if (contractCreations.length > 0) {
-    const firstDeploy = new Date(parseInt(contractCreations[contractCreations.length - 1].timeStamp) * 1000);
-    const daysSinceFirstDeploy = (Date.now() - firstDeploy.getTime()) / (1000 * 60 * 60 * 24);
-    
+    const firstDeploy = new Date(
+      parseInt(contractCreations[contractCreations.length - 1].timeStamp) * 1000
+    );
+    const daysSinceFirstDeploy =
+      (Date.now() - firstDeploy.getTime()) / (1000 * 60 * 60 * 24);
+
     if (daysSinceFirstDeploy < 30) {
       indicators.push("New deployer wallet (less than 30 days)");
     }
   }
 
   // High failure rate
-  const successfulContracts = contractCreations.filter(tx => tx.isError === "0").length;
+  const successfulContracts = contractCreations.filter(
+    (tx) => tx.isError === "0"
+  ).length;
   const successRate = successfulContracts / contractCreations.length;
-  
-  if (successRate < 0.5) {
+
+  if (successRate <= 0.5) {
     indicators.push("High contract failure rate");
   }
 
@@ -219,12 +229,14 @@ function identifyRiskIndicators(
 
   // Suspicious patterns
   const recentTxs = allTransactions.slice(0, 10);
-  const suspiciousMethods = recentTxs.filter(tx => 
-    tx.functionName.includes("transfer") || 
-    tx.functionName.includes("swap") ||
-    tx.functionName.includes("mint")
+  const suspiciousMethods = recentTxs.filter(
+    (tx) =>
+      tx.functionName &&
+      (tx.functionName.includes("transfer") ||
+        tx.functionName.includes("swap") ||
+        tx.functionName.includes("mint"))
   );
-  
+
   if (suspiciousMethods.length > 5) {
     indicators.push("Suspicious transaction patterns");
   }
@@ -235,10 +247,13 @@ function identifyRiskIndicators(
 /**
  * Calculate risk level based on indicators and score
  */
-function calculateRiskLevel(score: number, indicators: string[]): 'low' | 'medium' | 'high' {
-  if (score >= 80 && indicators.length === 0) return 'low';
-  if (score >= 60 && indicators.length <= 2) return 'medium';
-  return 'high';
+function calculateRiskLevel(
+  score: number,
+  indicators: string[]
+): "low" | "medium" | "high" {
+  if (score >= 80 && indicators.length === 0) return "low";
+  if (score >= 60 && indicators.length <= 2) return "medium";
+  return "high";
 }
 
 /**
@@ -250,56 +265,90 @@ export async function analyzeDeployerWallet(
   apiKey: string
 ): Promise<DeployerAnalysis | null> {
   try {
-    console.log(`[Deployer Analysis] Starting analysis for ${contractAddress} on chain ${chainId}`);
-    
+    console.log(
+      `[Deployer Analysis] Starting analysis for ${contractAddress} on chain ${chainId}`
+    );
+
     // Get contract creation transaction
-    const creationTx = await getContractCreationTransaction(chainId, contractAddress, apiKey);
+    const creationTx = await getContractCreationTransaction(
+      chainId,
+      contractAddress,
+      apiKey
+    );
     if (!creationTx) {
-      console.log(`[Deployer Analysis] Could not find contract creation transaction for ${contractAddress}`);
-      logger.warn("Could not find contract creation transaction", { contractAddress });
+      console.log(
+        `[Deployer Analysis] Could not find contract creation transaction for ${contractAddress}`
+      );
+      logger.warn("Could not find contract creation transaction", {
+        contractAddress,
+      });
       return null;
     }
 
     const deployerAddress = creationTx.contractCreator || creationTx.from;
-    console.log(`[Deployer Analysis] Found deployer address: ${deployerAddress}`);
+    console.log(
+      `[Deployer Analysis] Found deployer address: ${deployerAddress}`
+    );
     logger.info("Found deployer address", { deployerAddress, contractAddress });
 
     // Get deployer's transaction history
     const [allTransactions, contractCreations] = await Promise.all([
       getDeployerTransactions(chainId, deployerAddress, apiKey),
-      getDeployerContractCreations(chainId, deployerAddress, apiKey)
+      getDeployerContractCreations(chainId, deployerAddress, apiKey),
     ]);
 
     // Calculate metrics
-    const reputationScore = calculateReputationScore(contractCreations, allTransactions);
-    const riskIndicators = identifyRiskIndicators(contractCreations, allTransactions);
+    const reputationScore = calculateReputationScore(
+      contractCreations,
+      allTransactions
+    );
+    const riskIndicators = identifyRiskIndicators(
+      contractCreations,
+      allTransactions
+    );
     const riskLevel = calculateRiskLevel(reputationScore, riskIndicators);
 
     // Calculate additional metrics
-    const successfulContracts = contractCreations.filter(tx => tx.isError === "0").length;
-    const successRate = contractCreations.length > 0 ? successfulContracts / contractCreations.length : 0;
+    const successfulContracts = contractCreations.filter(
+      (tx) => tx.isError === "0"
+    ).length;
+    const successRate =
+      contractCreations.length > 0
+        ? successfulContracts / contractCreations.length
+        : 0;
 
     // Time calculations
-    const firstDeployDate = contractCreations.length > 0 
-      ? new Date(parseInt(contractCreations[contractCreations.length - 1].timeStamp) * 1000).toISOString()
-      : undefined;
-    
-    const lastDeployDate = contractCreations.length > 0
-      ? new Date(parseInt(contractCreations[0].timeStamp) * 1000).toISOString()
-      : undefined;
+    const firstDeployDate =
+      contractCreations.length > 0
+        ? new Date(
+            parseInt(
+              contractCreations[contractCreations.length - 1].timeStamp
+            ) * 1000
+          ).toISOString()
+        : undefined;
 
-    const timeSinceFirstDeploy = firstDeployDate 
-      ? (Date.now() - new Date(firstDeployDate).getTime()) / (1000 * 60 * 60 * 24)
+    const lastDeployDate =
+      contractCreations.length > 0
+        ? new Date(
+            parseInt(contractCreations[0].timeStamp) * 1000
+          ).toISOString()
+        : undefined;
+
+    const timeSinceFirstDeploy = firstDeployDate
+      ? (Date.now() - new Date(firstDeployDate).getTime()) /
+        (1000 * 60 * 60 * 24)
       : 0;
 
     // Volume calculations
-    const totalVolumeDeployed = contractCreations.reduce((sum, tx) => 
-      sum + parseFloat(tx.value || "0") / Math.pow(10, 18), 0
+    const totalVolumeDeployed = contractCreations.reduce(
+      (sum, tx) => sum + parseFloat(tx.value || "0") / Math.pow(10, 18),
+      0
     );
 
-    const averageContractSize = contractCreations.length > 0 
-      ? totalVolumeDeployed / contractCreations.length 
-      : 0;
+    const averageContractSize =
+      contractCreations.length > 0
+        ? totalVolumeDeployed / contractCreations.length
+        : 0;
 
     return {
       address: deployerAddress,
@@ -314,9 +363,11 @@ export async function analyzeDeployerWallet(
       totalVolumeDeployed,
       averageContractSize,
     };
-
   } catch (error) {
-    logger.error("Failed to analyze deployer wallet", { error, contractAddress });
+    logger.error("Failed to analyze deployer wallet", {
+      error,
+      contractAddress,
+    });
     return null;
   }
 }

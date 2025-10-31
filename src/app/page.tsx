@@ -11,21 +11,33 @@ import {
   Brain,
   Lock,
 } from "lucide-react";
-import { MatrixRain } from "../shared/components/MatrixRain";
+import dynamic from "next/dynamic";
+
+// Lazy load MatrixRain - not critical for LCP, loads after initial paint
+const MatrixRain = dynamic(
+  () =>
+    import("../shared/components/MatrixRain").then((mod) => ({
+      default: mod.MatrixRain,
+    })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 export default function HomePage() {
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Matrix Rain Background */}
+      {/* Matrix Rain Background - Lazy loaded */}
       <MatrixRain gridSize={32} minDurationSec={15} maxDurationSec={25} />
 
       {/* Grid Pattern Overlay */}
       <div className="grid-pattern absolute inset-0 pointer-events-none"></div>
 
-      {/* Hero Section */}
+      {/* Hero Section - LCP Critical Content */}
       <section className="pt-24 pb-20 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-7xl mx-auto text-center">
-          {/* Main Title */}
+          {/* Main Title - LCP Element */}
           <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black mb-8 leading-tight">
             <span className="text-white block mb-2">SMART CONTRACT</span>
             <span className="block neon-text neon-blue">SECURITY SCORE</span>
@@ -240,7 +252,7 @@ export default function HomePage() {
                 className="glass-card p-10 rounded-3xl text-center hover-glow transition-all duration-300 transform hover:scale-105"
               >
                 <div className="flex justify-center mb-6">
-                  <div className="w-40 h-40 flex items-center justify-center relative overflow-hidden rounded-2xl bg-gradient-to-br from-black/40 to-black/20 border border-white/10">
+                  <div className="w-40 h-40 flex items-center justify-center relative overflow-hidden rounded-2xl bg-linear-to-br from-black/40 to-black/20 border border-white/10">
                     <item.icon className={`w-20 h-20 ${item.color}`} />
                   </div>
                 </div>

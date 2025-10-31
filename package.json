@@ -60,5 +60,22 @@
   "overrides": {
     "axios": "^1.12.2",
     "fast-redact": "^3.5.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all",
+      "not ie 11",
+      "not chrome < 90",
+      "not safari < 14",
+      "not firefox < 88",
+      "not edge < 90"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

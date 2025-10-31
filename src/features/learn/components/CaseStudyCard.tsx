@@ -1,3 +1,4 @@
+import React from "react";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 
 interface CaseStudyCardProps {

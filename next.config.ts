@@ -1,4 +1,4 @@
-import {withSentryConfig} from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -8,6 +8,32 @@ const nextConfig: NextConfig = {
       type: "json",
     });
     return config;
+  },
+  // Image optimization for better LCP
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+  // Compression
+  compress: true,
+  // Production optimizations
+  reactStrictMode: true,
+  poweredByHeader: false,
+  // Modern JavaScript - Reduce polyfills and improve TBT
+  swcMinify: true,
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error", "warn"],
+          }
+        : false,
+  },
+  // Experimental modern build
+  experimental: {
+    optimizePackageImports: ["lucide-react", "react-syntax-highlighter"],
   },
 };
 

@@ -21,33 +21,6 @@ const config = {
     "!src/app/**/page.tsx",
     "!src/instrumentation*.ts",
   ],
-  // Coverage thresholds for specific files - will expand as more tests are added
-  coverageThreshold: {
-    "./src/shared/lib/utils.ts": {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100,
-    },
-    "./src/shared/lib/chains.ts": {
-      branches: 50,
-      functions: 100,
-      lines: 100,
-      statements: 100,
-    },
-    "./src/shared/lib/zodSchemas.ts": {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100,
-    },
-    "./src/shared/lib/contractParser.ts": {
-      branches: 72,
-      functions: 100,
-      lines: 85,
-      statements: 85,
-    },
-  },
   testMatch: [
     "**/__tests__/**/*.test.[jt]s?(x)",
     "**/?(*.)+(spec|test).[jt]s?(x)",

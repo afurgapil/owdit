@@ -41,10 +41,13 @@ export const logger = {
   },
   error(message: string, meta?: LogMeta & { error?: unknown }) {
     const err = meta?.error;
+    // Remove error from metadata to avoid duplication
+    const { error: _, ...rest } = meta || {};
     const enriched = {
-      ...meta,
-      error: undefined,
-      errorMessage: err instanceof Error ? err.message : String(err),
+      ...rest,
+      ...(err !== undefined && {
+        errorMessage: err instanceof Error ? err.message : String(err),
+      }),
     };
     console.error(format("error", message, enriched));
     if (err instanceof Error && err.stack) {

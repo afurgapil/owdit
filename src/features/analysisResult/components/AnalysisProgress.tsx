@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { AnalysisProgress } from "../../../types/contractAnalysis";
 import { CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
 
@@ -35,16 +35,16 @@ export function AnalysisProgress({
         const response = await fetch(
           `/api/analysis-progress?sessionId=${sessionId}&contractAddress=${contractAddress}&chainId=${chainId}`
         );
-        
+
         if (!response.ok) {
           throw new Error("Failed to fetch progress");
         }
-        
+
         const data = await response.json();
         if (data.success) {
           setProgressData(data.data);
           setIsLoading(false);
-          
+
           if (data.data.isComplete) {
             onComplete?.();
           } else if (data.data.hasFailed) {
@@ -114,7 +114,9 @@ export function AnalysisProgress({
         <div className="flex items-center">
           <XCircle className="h-8 w-8 text-red-400" />
           <div className="ml-3">
-            <h3 className="text-lg font-semibold text-red-400">Progress Error</h3>
+            <h3 className="text-lg font-semibold text-red-400">
+              Progress Error
+            </h3>
             <p className="text-gray-300">{error}</p>
           </div>
         </div>
@@ -134,7 +136,9 @@ export function AnalysisProgress({
         </h3>
         <div className="flex items-center justify-between mb-4">
           <span className="text-gray-300">Overall Progress</span>
-          <span className="text-white font-semibold">{progressData.overallProgress}%</span>
+          <span className="text-white font-semibold">
+            {progressData.overallProgress}%
+          </span>
         </div>
         <div className="w-full bg-gray-700 rounded-full h-3">
           <div
@@ -164,10 +168,14 @@ export function AnalysisProgress({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <h4 className={`font-medium ${getStatusColor(step.status)}`}>
-                  {step.step.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                  {step.step
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (l) => l.toUpperCase())}
                 </h4>
                 {step.status === "in_progress" && (
-                  <span className="text-sm text-gray-400">{step.progress}%</span>
+                  <span className="text-sm text-gray-400">
+                    {step.progress}%
+                  </span>
                 )}
               </div>
               <p className="text-sm text-gray-300 mt-1">{step.message}</p>
@@ -189,7 +197,9 @@ export function AnalysisProgress({
           <div className="flex items-center">
             <Loader2 className="h-5 w-5 text-neon-blue animate-spin mr-3" />
             <div>
-              <p className="text-neon-blue font-medium">Currently processing:</p>
+              <p className="text-neon-blue font-medium">
+                Currently processing:
+              </p>
               <p className="text-gray-300 text-sm">
                 {progressData.currentStep.message}
               </p>

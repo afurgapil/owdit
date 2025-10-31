@@ -2,15 +2,30 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { AddressInput } from "../../features/contractSearch/components/AddressInput";
 import { useContractSearch } from "../../features/contractSearch/hooks/useContractSearch";
-import { MatrixRain } from "../../shared/components/MatrixRain";
 import { useNetwork } from "../../shared/contexts/NetworkContext";
 import { Brain, Database, CheckCircle, Loader2 } from "lucide-react";
 import { CommentsSection } from "../../features/community/components/CommentsSection";
 import { DeployerAnalysisCard } from "../../features/analysisResult/components/DeployerAnalysisCard";
 import { InteractionAnalysisCard } from "../../features/analysisResult/components/InteractionAnalysisCard";
-import { DeployerAnalysis, InteractionAnalysis } from "../../types/contractAnalysis";
+import {
+  DeployerAnalysis,
+  InteractionAnalysis,
+} from "../../types/contractAnalysis";
+
+// Lazy load MatrixRain for better performance
+const MatrixRain = dynamic(
+  () =>
+    import("../../shared/components/MatrixRain").then((mod) => ({
+      default: mod.MatrixRain,
+    })),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 function AnalyzeContent() {
   const { selectedChain } = useNetwork();
@@ -47,7 +62,9 @@ function AnalyzeContent() {
     }
     // Reveal one step every ~1.2s to avoid showing all at once
     const interval = setInterval(() => {
-      setCurrentStepIndex((idx) => (idx < loadingSteps.length - 1 ? idx + 1 : idx));
+      setCurrentStepIndex((idx) =>
+        idx < loadingSteps.length - 1 ? idx + 1 : idx
+      );
     }, 1200);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,27 +98,49 @@ function AnalyzeContent() {
       <MatrixRain gridSize={24} minDurationSec={15} maxDurationSec={25} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-8 sm:py-12 lg:py-16">
-
         {/* Progress Modal (sequential UI) */}
         {isLoading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/70" />
             <div className="relative z-10 w-full max-w-xl mx-auto glass-card rounded-2xl border border-neon-blue/30 p-6">
-              <h3 className="text-xl font-bold text-white mb-1">Analyzing Contract</h3>
-              <p className="text-gray-300 mb-4">Please wait while we process the analysis steps.</p>
+              <h3 className="text-xl font-bold text-white mb-1">
+                Analyzing Contract
+              </h3>
+              <p className="text-gray-300 mb-4">
+                Please wait while we process the analysis steps.
+              </p>
               <div className="space-y-3">
-                {loadingSteps.slice(0, currentStepIndex + 1).map((label, idx) => (
-                  <div key={label} className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 border border-gray-700/50">
-                    <span className="text-gray-200">{label}</span>
-                    {idx < currentStepIndex ? (
-                      <CheckCircle className="h-5 w-5 text-neon-green" />
-                    ) : (
-                      <Loader2 className={`h-4 w-4 ${idx === 0 ? "text-neon-blue" : idx === 1 ? "text-neon-purple" : idx === 2 ? "text-neon-green" : idx === 3 ? "text-neon-pink" : "text-cyan-300"} animate-spin`} />
-                    )}
-                  </div>
-                ))}
+                {loadingSteps
+                  .slice(0, currentStepIndex + 1)
+                  .map((label, idx) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-800/40 border border-gray-700/50"
+                    >
+                      <span className="text-gray-200">{label}</span>
+                      {idx < currentStepIndex ? (
+                        <CheckCircle className="h-5 w-5 text-neon-green" />
+                      ) : (
+                        <Loader2
+                          className={`h-4 w-4 ${
+                            idx === 0
+                              ? "text-neon-blue"
+                              : idx === 1
+                              ? "text-neon-purple"
+                              : idx === 2
+                              ? "text-neon-green"
+                              : idx === 3
+                              ? "text-neon-pink"
+                              : "text-cyan-300"
+                          } animate-spin`}
+                        />
+                      )}
+                    </div>
+                  ))}
               </div>
-              <div className="mt-4 text-sm text-gray-400">This can take up to ~120 seconds due to AI inference.</div>
+              <div className="mt-4 text-sm text-gray-400">
+                This can take up to ~120 seconds due to AI inference.
+              </div>
             </div>
           </div>
         )}
@@ -111,7 +150,7 @@ function AnalyzeContent() {
         <div className="text-center mb-6 sm:mb-8">
           {/* Demo Section Header */}
           <div className="mb-6">
-            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-neon-purple/20 to-neon-blue/20 border border-neon-purple/30 rounded-full text-neon-purple font-bold text-lg mb-4">
+            <div className="inline-flex items-center px-6 py-3 bg-linear-to-r from-neon-purple/20 to-neon-blue/20 border border-neon-purple/30 rounded-full text-neon-purple font-bold text-lg mb-4">
               <Database className="h-6 w-6 mr-3" />
               DEMO CONTRACTS
             </div>
@@ -296,7 +335,10 @@ function AnalyzeContent() {
                       </span>
                     </div>
                     {(() => {
-                      const contractName = "contractName" in result ? (result as { contractName?: string }).contractName : undefined;
+                      const contractName =
+                        "contractName" in result
+                          ? (result as { contractName?: string }).contractName
+                          : undefined;
                       return result.verified && contractName ? (
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="font-bold">Name:</span>
@@ -305,7 +347,11 @@ function AnalyzeContent() {
                       ) : null;
                     })()}
                     {(() => {
-                      const compilerVersion = "compilerVersion" in result ? (result as { compilerVersion?: string }).compilerVersion : undefined;
+                      const compilerVersion =
+                        "compilerVersion" in result
+                          ? (result as { compilerVersion?: string })
+                              .compilerVersion
+                          : undefined;
                       return result.verified && compilerVersion ? (
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="font-bold">Compiler:</span>
@@ -595,20 +641,29 @@ function AnalyzeContent() {
 
             {/* Enhanced Analysis Cards */}
             {(() => {
-              const deployerAnalysis = "deployerAnalysis" in result ? (result as { deployerAnalysis?: unknown }).deployerAnalysis : undefined;
+              const deployerAnalysis =
+                "deployerAnalysis" in result
+                  ? (result as { deployerAnalysis?: unknown }).deployerAnalysis
+                  : undefined;
               return deployerAnalysis ? (
-                <DeployerAnalysisCard 
-                  deployerAnalysis={deployerAnalysis as DeployerAnalysis} 
+                <DeployerAnalysisCard
+                  deployerAnalysis={deployerAnalysis as DeployerAnalysis}
                   className="mb-6"
                 />
               ) : null;
             })()}
 
             {(() => {
-              const interactionAnalysis = "interactionAnalysis" in result ? (result as { interactionAnalysis?: unknown }).interactionAnalysis : undefined;
+              const interactionAnalysis =
+                "interactionAnalysis" in result
+                  ? (result as { interactionAnalysis?: unknown })
+                      .interactionAnalysis
+                  : undefined;
               return interactionAnalysis ? (
-                <InteractionAnalysisCard 
-                  interactionAnalysis={interactionAnalysis as InteractionAnalysis} 
+                <InteractionAnalysisCard
+                  interactionAnalysis={
+                    interactionAnalysis as InteractionAnalysis
+                  }
                   className="mb-6"
                 />
               ) : null;
@@ -616,7 +671,10 @@ function AnalyzeContent() {
 
             {/* Overall Risk Score */}
             {(() => {
-              const overallRiskScore = "overallRiskScore" in result ? (result as { overallRiskScore?: number }).overallRiskScore : undefined;
+              const overallRiskScore =
+                "overallRiskScore" in result
+                  ? (result as { overallRiskScore?: number }).overallRiskScore
+                  : undefined;
               return typeof overallRiskScore === "number" ? (
                 <div className="glass-card p-6 rounded-2xl border border-neon-blue/30 mb-6">
                   <div className="text-center">
@@ -626,11 +684,11 @@ function AnalyzeContent() {
                     <div className="flex items-center justify-center mb-4">
                       <div
                         className={`w-32 h-32 rounded-full flex items-center justify-center text-4xl font-black border-4 ${
-                          (100 - overallRiskScore) >= 80
+                          100 - overallRiskScore >= 80
                             ? "bg-neon-green/20 border-neon-green/40 text-neon-green"
-                            : (100 - overallRiskScore) >= 60
+                            : 100 - overallRiskScore >= 60
                             ? "bg-neon-blue/20 border-neon-blue/40 text-neon-blue"
-                            : (100 - overallRiskScore) >= 40
+                            : 100 - overallRiskScore >= 40
                             ? "bg-neon-purple/20 border-neon-purple/40 text-neon-purple"
                             : "bg-red-500/20 border-red-500/40 text-red-400"
                         } glow-owl`}

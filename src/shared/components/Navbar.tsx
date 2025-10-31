@@ -42,7 +42,15 @@ export function Navbar() {
         <div className="flex justify-between items-center h-24">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-4 group">
-            <Image src={logo} alt="logo" width={64} height={64} />
+            <Image 
+              src={logo} 
+              alt="Owdit logo" 
+              width={64} 
+              height={64}
+              priority
+              sizes="64px"
+              quality={90}
+            />
             <div className="flex flex-col">
               <span className="text-3xl font-black text-white group-hover:text-neon-blue transition-colors duration-300 font-raleway">
                 Owdit

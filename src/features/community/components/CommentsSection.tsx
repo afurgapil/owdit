@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { shortenAddress } from "../../../shared/lib/utils";
 
