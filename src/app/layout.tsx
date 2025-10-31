@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Open_Sans, Raleway } from "next/font/google";
 import "./globals.css";
 import { Layout } from "../shared/components/Layout";
 import Script from "next/script";
+import DeferredGA from "../shared/components/DeferredGA";
+import LoadNonCriticalCss from "../shared/components/LoadNonCriticalCss";
 import ClientRoot from "./ClientRoot";
 
 const geistSans = Geist({
@@ -100,6 +102,14 @@ export default function RootLayout({
         {/* Preconnect to external domains for better performance */}
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+
+        {/* Preconnect to Google Analytics */}
+        <link
+          rel="preconnect"
+          href="https://www.google-analytics.com"
+          crossOrigin="anonymous"
+        />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
         {/* Preconnect to Sentry - 240ms improvement */}
         <link
@@ -212,27 +222,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${openSans.variable} ${raleway.variable} antialiased`}
       >
-        {/* Google Analytics - Defer to reduce TBT */}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${
-            process.env.NEXT_PUBLIC_GA_ID ?? ""
-          }`}
-          strategy="lazyOnload"
-        />
-        <Script id="ga-init" strategy="lazyOnload">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);} 
-            gtag('js', new Date());
-            const id = '${process.env.NEXT_PUBLIC_GA_ID ?? ""}';
-            if (id) {
-              gtag('config', id, { 
-                page_path: window.location.pathname,
-                send_page_view: false
-              });
-            }
-          `}
-        </Script>
+        {/* Defer GA until first interaction/idle */}
+        <DeferredGA id={process.env.NEXT_PUBLIC_GA_ID} />
+
+        {/* Load non-critical CSS after first paint */}
+        <LoadNonCriticalCss />
         <ClientRoot>
           <Layout>{children}</Layout>
         </ClientRoot>

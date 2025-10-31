@@ -64,14 +64,11 @@
   },
   "browserslist": {
     "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all",
-      "not ie 11",
-      "not chrome < 90",
-      "not safari < 14",
-      "not firefox < 88",
-      "not edge < 90"
+      "chrome >= 110",
+      "edge >= 110",
+      "firefox >= 110",
+      "safari >= 15.4",
+      "ios_saf >= 15.4"
     ],
     "development": [
       "last 1 chrome version",
