@@ -1,8 +1,9 @@
 // Avoid using next/server in tests; use standard Response instead
 import { scoreResponseSchema } from "../../../../shared/lib/zodSchemas";
 
-export async function GET(request: Request | { url: string }) {
-  const makeResponse = (body: unknown, status: number) => ({
+export async function GET(request: Request): Promise<Response> {
+  // Return a minimal Response-like object compatible with tests
+  const makeResponse = (body: unknown, status: number): Response => ({
     status,
     json: async () => body,
   }) as unknown as Response;
@@ -13,8 +14,8 @@ export async function GET(request: Request | { url: string }) {
 
     if (!address) {
       const body = scoreResponseSchema.parse({
-          success: false,
-          error: "Address parameter is required",
+        success: false,
+        error: "Address parameter is required",
       });
       return makeResponse(body, 400);
     }
@@ -44,8 +45,8 @@ export async function GET(request: Request | { url: string }) {
   } catch (error) {
     console.error("Score API error:", error);
     const body = scoreResponseSchema.parse({
-        success: false,
-        error: "Server error occurred",
+      success: false,
+      error: "Server error occurred",
     });
     return makeResponse(body, 500);
   }

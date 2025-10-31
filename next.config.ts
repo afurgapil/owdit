@@ -21,8 +21,6 @@ const nextConfig: NextConfig = {
   // Production optimizations
   reactStrictMode: true,
   poweredByHeader: false,
-  // Modern JavaScript - Reduce polyfills and improve TBT
-  swcMinify: true,
   compiler: {
     removeConsole:
       process.env.NODE_ENV === "production"

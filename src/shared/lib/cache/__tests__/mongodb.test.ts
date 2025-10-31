@@ -1,3 +1,145 @@
+import { contractCache, ContractCacheService } from "../mongodb";
+
+const fakeCollection: any = {
+  findOne: jest.fn(),
+  replaceOne: jest.fn(),
+  deleteOne: jest.fn(),
+  createIndex: jest.fn(),
+  countDocuments: jest.fn(),
+  deleteMany: jest.fn(),
+  find: jest.fn().mockReturnValue({
+    sort: jest.fn().mockReturnValue({
+      skip: jest.fn().mockReturnValue({
+        limit: jest.fn().mockReturnValue({ toArray: jest.fn() }),
+      }),
+    }),
+  }),
+};
+
+function makeAnalysis(overrides: Partial<any> = {}) {
+  return {
+    verified: true,
+    chainId: 1,
+    address: "0x0000000000000000000000000000000000000001",
+    contractInfo: { name: "A", compilerVersion: "v", isContract: true, bytecodeLength: 1 },
+    timestamp: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+describe("ContractCacheService", () => {
+  beforeEach(async () => {
+    jest.resetAllMocks();
+    // Ensure new singleton instance is clean between tests by disconnecting
+    await (contractCache as ContractCacheService).disconnect();
+    // Stub connect to avoid real MongoClient
+    jest
+      .spyOn(ContractCacheService.prototype as any, "connect")
+      .mockImplementation(async function (this: any) {
+        this.connection = { client: { close: jest.fn() }, db: {} as any, collection: fakeCollection };
+      });
+  });
+
+  test("connect establishes indexes and sets connection", async () => {
+    await (contractCache as ContractCacheService).connect();
+    expect(fakeCollection.createIndex).toHaveBeenCalledTimes(0);
+  });
+
+  test("getCachedAnalysis returns null when miss", async () => {
+    fakeCollection.findOne.mockResolvedValueOnce(null);
+    const res = await contractCache.getCachedAnalysis(
+      "0x1",
+      1
+    );
+    expect(res).toBeNull();
+  });
+
+  test("getCachedAnalysis returns analysis when hit and not expired", async () => {
+    const analysis = makeAnalysis();
+    fakeCollection.findOne.mockResolvedValueOnce({ analysis });
+    const res = await contractCache.getCachedAnalysis(analysis.address, 1);
+    expect(res).toEqual(analysis);
+  });
+
+  test("getCachedAnalysis deletes and returns null when expired", async () => {
+    const analysis = makeAnalysis();
+    const past = new Date(Date.now() - 1000);
+    fakeCollection.findOne.mockResolvedValueOnce({ analysis, ttl: past });
+    fakeCollection.deleteOne.mockResolvedValueOnce({ deletedCount: 1 });
+    const res = await contractCache.getCachedAnalysis(analysis.address, 1);
+    expect(res).toBeNull();
+    expect(fakeCollection.deleteOne).toHaveBeenCalled();
+  });
+
+  test("cacheAnalysis skips upgradeable contract when flag set", async () => {
+    const analysis = makeAnalysis();
+    await contractCache.cacheAnalysis(analysis.address, 1, analysis, true);
+    expect(fakeCollection.replaceOne).not.toHaveBeenCalled();
+  });
+
+  test("cacheAnalysis upserts when not upgradeable", async () => {
+    const analysis = makeAnalysis();
+    fakeCollection.replaceOne.mockResolvedValueOnce({});
+    await contractCache.cacheAnalysis(analysis.address, 1, analysis, false);
+    expect(fakeCollection.replaceOne).toHaveBeenCalled();
+  });
+
+  test("deleteCachedAnalysis calls deleteOne", async () => {
+    fakeCollection.deleteOne.mockResolvedValueOnce({ deletedCount: 1 });
+    await contractCache.deleteCachedAnalysis("0x1", 1);
+    expect(fakeCollection.deleteOne).toHaveBeenCalled();
+  });
+
+  test("getCacheStats aggregates counts", async () => {
+    fakeCollection.countDocuments
+      .mockResolvedValueOnce(5) // total
+      .mockResolvedValueOnce(1) // upgradeable
+      .mockResolvedValueOnce(2); // expired
+    const stats = await contractCache.getCacheStats();
+    expect(stats.totalCached).toBe(5);
+    expect(stats.upgradeableCached).toBe(1);
+    expect(stats.expiredCached).toBe(2);
+  });
+
+  test("cleanExpiredCache deletes by ttl<now", async () => {
+    fakeCollection.deleteMany.mockResolvedValueOnce({ deletedCount: 3 });
+    const deleted = await contractCache.cleanExpiredCache();
+    expect(deleted).toBe(3);
+  });
+
+  test("getHistory returns transformed entries with pagination", async () => {
+    const now = new Date();
+    const cached = {
+      _id: "k",
+      address: "0x1",
+      chainId: 1,
+      analysis: makeAnalysis({ address: "0x1", chainId: 1, aiOutput: { score: 70, reason: "ok" } }),
+      createdAt: now,
+      updatedAt: now,
+      isUpgradeable: false,
+      ttl: new Date(Date.now() + 10000),
+    };
+    fakeCollection.countDocuments
+      .mockResolvedValueOnce(1) // total count for query
+      .mockResolvedValueOnce(1); // totalCached in stats (unused here)
+    fakeCollection.find.mockReturnValue({
+      sort: jest.fn().mockReturnValue({
+        skip: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            toArray: jest.fn().mockResolvedValueOnce([cached]),
+          }),
+        }),
+      }),
+    });
+
+    const { history, pagination } = await contractCache.getHistory(10, 0);
+    expect(history.length).toBe(1);
+    expect(history[0].address).toBe("0x1");
+    expect(pagination.total).toBe(1);
+    expect(pagination.hasMore).toBe(false);
+  });
+});
+
 import { ContractCacheService } from "../mongodb";
 
 // Mock MongoDB

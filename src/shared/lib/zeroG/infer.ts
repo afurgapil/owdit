@@ -1,5 +1,12 @@
 import { ethers } from "ethers";
 import { createZGComputeNetworkBroker } from "@0glabs/0g-serving-broker";
+// Allow tests to inject a custom broker factory
+let brokerFactory: (...args: unknown[]) => unknown = createZGComputeNetworkBroker as unknown as (
+  ...args: unknown[]
+) => unknown;
+export function __setBrokerFactory(factory: (...args: unknown[]) => unknown) {
+  brokerFactory = factory;
+}
 
 export interface RiskFeatures {
   summary?: string;
@@ -142,7 +149,7 @@ export async function inferRiskOn0G(
   const wallet = new ethers.Wallet(priv, provider);
 
   // 2) Broker
-  const broker = (await createZGComputeNetworkBroker(
+  const broker = (await brokerFactory(
     wallet
   )) as unknown as ZGBrokerLike;
 

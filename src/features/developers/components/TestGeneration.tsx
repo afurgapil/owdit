@@ -86,20 +86,35 @@ export default function TestGeneration({
     );
   };
 
-  const normalizeResult = (raw: any) => {
-    const coverage = raw.coverage || { functionsCount: 0, testCasesCount: 0 };
-    const tests = raw.tests || {};
-    const hardhat = tests.hardhat
-      ? (tests.hardhat.testFile || tests.hardhat.code)
-        ? { testFile: tests.hardhat.testFile ?? tests.hardhat.code, setupFile: tests.hardhat.setupFile ?? "" }
-        : undefined
-      : undefined;
-    const foundry = tests.foundry
-      ? (tests.foundry.testFile || tests.foundry.code)
-        ? { testFile: tests.foundry.testFile ?? tests.foundry.code }
-        : undefined
-      : undefined;
-    return { success: !!raw.success, tests: { hardhat, foundry }, coverage };
+  const normalizeResult = (raw: unknown): TestGenerationResult => {
+    const obj = (raw as Record<string, unknown>) || {};
+    const tests = (obj.tests as Record<string, unknown>) || {};
+
+    const hardhatSrc = tests && (tests as { hardhat?: Record<string, unknown> }).hardhat;
+    const foundrySrc = tests && (tests as { foundry?: Record<string, unknown> }).foundry;
+
+    const hardhat = hardhatSrc && (hardhatSrc as { testFile?: string; code?: string; setupFile?: string });
+    const foundry = foundrySrc && (foundrySrc as { testFile?: string; code?: string });
+
+    const coverageSrc = (obj.coverage as { functionsCount?: number; testCasesCount?: number }) || {};
+
+    return {
+      success: Boolean((obj as { success?: boolean }).success),
+      tests: {
+        hardhat:
+          hardhat && (hardhat.testFile || hardhat.code)
+            ? { testFile: hardhat.testFile ?? (hardhat.code as string), setupFile: hardhat.setupFile ?? "" }
+            : undefined,
+        foundry:
+          foundry && (foundry.testFile || foundry.code)
+            ? { testFile: foundry.testFile ?? (foundry.code as string) }
+            : undefined,
+      },
+      coverage: {
+        functionsCount: coverageSrc.functionsCount ?? 0,
+        testCasesCount: coverageSrc.testCasesCount ?? 0,
+      },
+    };
   };
 
   const handleGenerate = async () => {
@@ -125,7 +140,7 @@ export default function TestGeneration({
     try {
       const testResult = await onGenerate(contractCode, contractName, selectedFrameworks);
       if (!testResult?.success) {
-        setError(testResult?.error || "Generation failed");
+        setError("Generation failed");
         return;
       }
       setResult(normalizeResult(testResult));

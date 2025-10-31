@@ -201,7 +201,9 @@ export default function ImportResolver({
                   {importInfo.type === 'relative' && (
                     <>
                       <input
-                        ref={(el) => (fileInputsRef.current[importInfo.path] = el)}
+                        ref={(el) => {
+                          fileInputsRef.current[importInfo.path] = el;
+                        }}
                         type="file"
                         accept=".sol,.vy,.rs,.py,.ts,.js"
                         onChange={(e) => handleFileUpload(importInfo.path, e)}

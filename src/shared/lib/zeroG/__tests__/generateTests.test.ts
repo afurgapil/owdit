@@ -1,3 +1,132 @@
+// Defer requiring until after mocks
+
+jest.mock("@0glabs/0g-serving-broker", () => {
+  const mocked = {
+    createZGComputeNetworkBroker: jest.fn().mockResolvedValue({
+      inference: {
+        listService: jest.fn().mockResolvedValue([
+          { provider: "0xprov1", verifiability: "TeeML" },
+        ]),
+        getServiceMetadata: jest
+          .fn()
+          .mockResolvedValue({ endpoint: "http://0g.local", model: "llm" }),
+        acknowledgeProviderSigner: jest.fn().mockResolvedValue(undefined),
+        getRequestHeaders: jest.fn().mockResolvedValue({ Authorization: "sig" }),
+        processResponse: jest.fn().mockResolvedValue(true),
+      },
+      ledger: {
+        addLedger: jest.fn().mockResolvedValue(undefined),
+        depositFund: jest.fn().mockResolvedValue(undefined),
+      },
+    }),
+  };
+  return { __esModule: true, ...mocked, default: mocked };
+});
+
+jest.mock("ethers", () => ({
+  ethers: {
+    JsonRpcProvider: class {
+      constructor(public url: string) {}
+      async getBalance() { return BigInt(100); }
+    },
+    Wallet: class {
+      address = "0xabc";
+      constructor(privateKey: string, provider: any) {}
+    },
+  },
+}));
+
+const { generateTestsOn0G, __setBrokerFactory } = require("../generateTests");
+beforeEach(() => {
+  __setBrokerFactory(async () => ({
+    inference: {
+      listService: async () => ([{ provider: "0xprov1", verifiability: "TeeML" }]),
+      getServiceMetadata: async () => ({ endpoint: "http://0g.local", model: "llm" }),
+      acknowledgeProviderSigner: async () => {},
+      getRequestHeaders: async () => ({ Authorization: "sig" }),
+      processResponse: async () => true,
+    },
+    ledger: {
+      addLedger: async () => {},
+      depositFund: async () => {},
+    },
+  }));
+});
+
+describe("generateTestsOn0G", () => {
+  const baseFeatures = {
+    contractCode: "contract A{}",
+    contractName: "A",
+    testFrameworks: ["hardhat", "foundry"] as ("hardhat" | "foundry")[],
+  };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    process.env.ZERO_G_PRIVATE_KEY = "0xpriv";
+  });
+
+  test("success for both frameworks", async () => {
+    const origFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                hardhat: { testFile: "// hh", setupFile: "// setup" },
+                foundry: { testFile: "// foundry" },
+                coverage: { functionsCount: 4, testCasesCount: 8 },
+              }),
+            },
+          },
+        ],
+      }),
+    } as any);
+
+    const res = await generateTestsOn0G(baseFeatures);
+    expect(res.success).toBe(true);
+    expect(res.tests.hardhat?.testFile).toBeDefined();
+    expect(res.tests.foundry?.testFile).toBeDefined();
+    expect(res.coverage.functionsCount).toBe(4);
+
+    global.fetch = origFetch as any;
+  });
+
+  test("handles timeout error path via AbortError", async () => {
+    const origFetch = global.fetch;
+    const abortErr: any = new Error("The operation was aborted");
+    abortErr.name = "AbortError";
+    global.fetch = jest.fn().mockImplementation(() => Promise.reject(abortErr));
+
+    const res = await generateTestsOn0G(baseFeatures);
+    expect(res.success).toBe(false);
+    expect(res.error?.toLowerCase()).toMatch(/timeout|aborted/);
+
+    global.fetch = origFetch as any;
+  });
+
+  test("returns failure when ZERO_G_PRIVATE_KEY missing", async () => {
+    delete process.env.ZERO_G_PRIVATE_KEY;
+    const res = await generateTestsOn0G(baseFeatures);
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/ZERO_G_PRIVATE_KEY/);
+  });
+
+  test("maps network failures to user-friendly error", async () => {
+    const origFetch = global.fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error("fetch failed: connection reset"));
+
+    const res = await generateTestsOn0G(baseFeatures);
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/server connection failed|unavailable/i);
+
+    global.fetch = origFetch as any;
+  });
+});
+
 import type {
   TestGenerationFeatures,
   TestGenerationResponse,

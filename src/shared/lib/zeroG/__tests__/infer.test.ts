@@ -1,3 +1,122 @@
+// Defer requiring module under test until after mocks
+
+jest.mock("@0glabs/0g-serving-broker", () => {
+  const mocked = {
+    createZGComputeNetworkBroker: jest.fn().mockResolvedValue({
+      inference: {
+        listService: jest.fn().mockResolvedValue([
+          { provider: "0xprov1", verifiability: "TeeML" },
+        ]),
+        getServiceMetadata: jest
+          .fn()
+          .mockResolvedValue({ endpoint: "http://0g.local", model: "llm" }),
+        acknowledgeProviderSigner: jest.fn().mockResolvedValue(undefined),
+        getRequestHeaders: jest.fn().mockResolvedValue({ Authorization: "sig" }),
+        processResponse: jest.fn().mockResolvedValue(true),
+      },
+      ledger: {
+        addLedger: jest.fn().mockResolvedValue(undefined),
+        depositFund: jest.fn().mockResolvedValue(undefined),
+      },
+    }),
+  };
+  return { __esModule: true, ...mocked, default: mocked };
+});
+
+jest.mock("ethers", () => ({
+  ethers: {
+    JsonRpcProvider: class {
+      constructor(public url: string) {}
+      async getBalance() { return BigInt(100); }
+    },
+    Wallet: class {
+      address = "0xabc";
+      constructor(privateKey: string, provider: any) {}
+    },
+  },
+}));
+
+const { inferRiskOn0G, __setBrokerFactory } = require("../infer");
+beforeEach(() => {
+  __setBrokerFactory(async () => ({
+    inference: {
+      listService: async () => ([{ provider: "0xprov1", verifiability: "TeeML" }]),
+      getServiceMetadata: async () => ({ endpoint: "http://0g.local", model: "llm" }),
+      acknowledgeProviderSigner: async () => {},
+      getRequestHeaders: async () => ({ Authorization: "sig" }),
+      processResponse: async () => true,
+    },
+    ledger: {
+      addLedger: async () => {},
+      depositFund: async () => {},
+    },
+  }));
+});
+
+describe("inferRiskOn0G", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    process.env.PRIVATE_KEY = "0xpriv";
+  });
+
+  test("success path parses JSON response", async () => {
+    const origFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: { content: JSON.stringify({ score: 42, reason: "ok" }) },
+          },
+        ],
+      }),
+    } as any);
+
+    const out = await inferRiskOn0G({ summary: "test" });
+    expect(out.score).toBe(42);
+    expect(out.reason).toBe("ok");
+
+    global.fetch = origFetch as any;
+  });
+
+  test("timeout/abort yields unavailable error after retries", async () => {
+    const origFetch = global.fetch;
+    global.fetch = jest.fn().mockImplementation(() => {
+      const err = new Error("timeout");
+      return Promise.reject(err);
+    });
+
+    await expect(inferRiskOn0G({ summary: "x" })).rejects.toThrow(/unavailable|failed/i);
+
+    global.fetch = origFetch as any;
+  });
+
+  test("markdown fenced JSON parsing fallback", async () => {
+    const origFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: { content: "```json\n{\"score\": 60, \"reason\": \"md\"}\n```" },
+          },
+        ],
+      }),
+    } as any);
+
+    const out = await inferRiskOn0G({ summary: "test" });
+    expect(out.score).toBe(60);
+    expect(out.reason).toBe("md");
+
+    global.fetch = origFetch as any;
+  });
+
+  test("throws when PRIVATE_KEY missing", async () => {
+    delete process.env.PRIVATE_KEY;
+    await expect(inferRiskOn0G({} as any)).rejects.toThrow(/PRIVATE_KEY/);
+  });
+});
+
 import type { RiskFeatures, RiskInferenceOutput } from "../infer";
 
 // We're testing only the parsing and utility logic, not actual 0G calls

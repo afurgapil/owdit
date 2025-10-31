@@ -59,6 +59,22 @@ if (typeof global.Response === "undefined") {
   // @ts-ignore
   global.Response = (typeof window !== "undefined" && window.Response) ? window.Response : function () {};
 }
+// Ensure Response.json static helper exists for NextResponse.json
+// Provide a minimal shim that matches usage in tests
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+if (typeof global.Response.json !== "function") {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  global.Response.json = (body, init) => {
+    return {
+      status: (init && init.status) || 200,
+      async json() {
+        return body;
+      },
+    };
+  };
+}
 if (typeof global.Headers === "undefined") {
   // @ts-ignore
   global.Headers = (typeof window !== "undefined" && window.Headers) ? window.Headers : function () {};
@@ -69,3 +85,7 @@ if (typeof window !== "undefined" && typeof window.dataLayer === "undefined") {
   // @ts-ignore
   window.dataLayer = [];
 }
+
+// Ensure React is in global scope for components transpiled with classic JSX runtime
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+global.React = require('react');
