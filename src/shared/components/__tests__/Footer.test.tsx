@@ -30,7 +30,7 @@ describe("Footer", () => {
     it("renders Owdit logo", () => {
       render(<Footer />);
 
-      const logo = screen.getByAlt("logo");
+      const logo = screen.getByAltText("logo");
       expect(logo).toBeInTheDocument();
     });
 
@@ -135,7 +135,7 @@ describe("Footer", () => {
     it("logo has alt text", () => {
       render(<Footer />);
 
-      const logo = screen.getByAlt("logo");
+      const logo = screen.getByAltText("logo");
       expect(logo).toHaveAttribute("alt", "logo");
     });
   });
@@ -161,7 +161,7 @@ describe("Footer", () => {
       render(<Footer />);
 
       // Logo
-      expect(screen.getByAlt("logo")).toBeInTheDocument();
+      expect(screen.getByAltText("logo")).toBeInTheDocument();
 
       // Company name
       expect(screen.getByText("Owdit")).toBeInTheDocument();

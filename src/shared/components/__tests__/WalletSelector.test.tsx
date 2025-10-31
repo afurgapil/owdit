@@ -146,7 +146,44 @@ describe("WalletSelector", () => {
   });
 
   describe("Loading States", () => {
-    it("shows loading spinner for pending connector", () => {
+    it("shows loading spinner for pending connector", async () => {
+      // First render: not pending, click to select connector
+      mockUseConnect.mockReturnValue({
+        connect: mockConnect,
+        connectors: mockConnectors,
+        isPending: false,
+      });
+
+      const { container, rerender } = render(
+        <WalletSelector isOpen={true} onClose={mockOnClose} />
+      );
+
+      const browserWalletButton = screen
+        .getByText("Browser Wallet")
+        .closest("button");
+      fireEvent.click(browserWalletButton!);
+
+      // Then set pending and rerender same component instance
+      mockUseConnect.mockReturnValue({
+        connect: mockConnect,
+        connectors: mockConnectors,
+        isPending: true,
+      });
+
+      rerender(<WalletSelector isOpen={true} onClose={mockOnClose} />);
+
+      // Check for spinner (animate-spin class) inside the selected connector button
+      await waitFor(() => {
+        const updatedButton = screen
+          .getByText("Browser Wallet")
+          .closest("button");
+        expect(
+          updatedButton?.querySelector(".animate-spin")
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("disables button when connector is pending", async () => {
       mockUseConnect.mockReturnValue({
         connect: mockConnect,
         connectors: mockConnectors,
@@ -157,39 +194,14 @@ describe("WalletSelector", () => {
 
       const browserWalletButton = screen
         .getByText("Browser Wallet")
-        .closest("button");
-      fireEvent.click(browserWalletButton!);
+        .closest("button") as HTMLButtonElement;
 
-      // After clicking, the isPending state should show loading
-      mockUseConnect.mockReturnValue({
-        connect: mockConnect,
-        connectors: mockConnectors,
-        isPending: true,
+      fireEvent.click(browserWalletButton);
+
+      // Wait until disabled state applies to the selected connector
+      await waitFor(() => {
+        expect(browserWalletButton).toBeDisabled();
       });
-
-      const { container } = render(
-        <WalletSelector isOpen={true} onClose={mockOnClose} />
-      );
-
-      // Check for spinner (animate-spin class)
-      const spinner = container.querySelector(".animate-spin");
-      expect(spinner).toBeInTheDocument();
-    });
-
-    it("disables button when connector is pending", () => {
-      mockUseConnect.mockReturnValue({
-        connect: mockConnect,
-        connectors: mockConnectors,
-        isPending: true,
-      });
-
-      const { container } = render(
-        <WalletSelector isOpen={true} onClose={mockOnClose} />
-      );
-
-      const buttons = container.querySelectorAll("button[disabled]");
-      // Should have disabled buttons (excluding close button)
-      expect(buttons.length).toBeGreaterThan(0);
     });
   });
 

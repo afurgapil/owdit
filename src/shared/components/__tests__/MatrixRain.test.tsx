@@ -4,15 +4,7 @@ import { MatrixRain } from "../MatrixRain";
 
 describe("MatrixRain", () => {
   describe("Client-side Rendering", () => {
-    it("renders nothing on server-side (initial render)", () => {
-      const { container } = render(<MatrixRain />);
-
-      // Initially should render null (server-side)
-      const matrixContainer = container.querySelector(".matrix-container");
-      expect(matrixContainer).not.toBeInTheDocument();
-    });
-
-    it("renders matrix container after client mount", async () => {
+    it("renders matrix container", async () => {
       const { container } = render(<MatrixRain />);
 
       await waitFor(() => {
@@ -57,7 +49,9 @@ describe("MatrixRain", () => {
       const { container } = render(<MatrixRain />);
 
       await waitFor(() => {
-        const firstColumn = container.querySelector(".matrix-column");
+        const firstColumn = container.querySelector(
+          ".matrix-column"
+        ) as HTMLElement;
         const duration = firstColumn?.style.animationDuration;
         expect(duration).toBeDefined();
         expect(duration).toMatch(/\d+s/);

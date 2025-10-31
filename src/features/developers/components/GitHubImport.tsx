@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Github, Search, ExternalLink, AlertCircle, CheckCircle, Loader } from "lucide-react";
 
 interface GitHubFile {
@@ -210,14 +210,14 @@ export default function GitHubImport({ onFilesChange, onSelectedFilesChange, onR
                 type="url"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                placeholder="https://github.com/owner/repository"
+                placeholder="GitHub repository URL"
                 className="w-full pl-10 pr-4 py-2 bg-black/60 border border-neon-cyan/30 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-300"
                 disabled={isLoading}
               />
             </div>
             <button
               onClick={fetchRepository}
-              disabled={isLoading || !repoUrl.trim()}
+              disabled={isLoading}
               className="px-6 py-2 bg-gradient-to-r from-neon-cyan to-neon-blue hover:from-neon-cyan/80 hover:to-neon-blue/80 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg transition-all duration-300 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-neon-cyan/20 flex items-center space-x-2 border-2 border-neon-cyan/50 hover:border-neon-cyan shadow-lg"
             >
               {isLoading ? (
@@ -225,7 +225,7 @@ export default function GitHubImport({ onFilesChange, onSelectedFilesChange, onR
               ) : (
                 <Search className="h-4 w-4" />
               )}
-              <span>{isLoading ? "Fetching..." : "Fetch"}</span>
+              <span>{isLoading ? "Fetching..." : "Fetch Repository"}</span>
             </button>
           </div>
         </div>

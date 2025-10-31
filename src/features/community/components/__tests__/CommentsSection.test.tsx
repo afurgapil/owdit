@@ -174,7 +174,9 @@ describe("CommentsSection", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Share your thoughts/i)).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText(/Share your findings, risks, or references.../i)
+        ).toBeInTheDocument();
       });
     });
   });

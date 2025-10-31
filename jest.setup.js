@@ -49,3 +49,23 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
 });
+
+// Polyfill Fetch API globals for Next internals in tests
+if (typeof global.Request === "undefined") {
+  // @ts-ignore
+  global.Request = (typeof window !== "undefined" && window.Request) ? window.Request : function () {};
+}
+if (typeof global.Response === "undefined") {
+  // @ts-ignore
+  global.Response = (typeof window !== "undefined" && window.Response) ? window.Response : function () {};
+}
+if (typeof global.Headers === "undefined") {
+  // @ts-ignore
+  global.Headers = (typeof window !== "undefined" && window.Headers) ? window.Headers : function () {};
+}
+
+// Provide default Google Analytics dataLayer for tests expecting it
+if (typeof window !== "undefined" && typeof window.dataLayer === "undefined") {
+  // @ts-ignore
+  window.dataLayer = [];
+}

@@ -4,6 +4,10 @@ const config = {
   testEnvironment: "jest-environment-jsdom",
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    // Map Provider used inside components to lightweight shim to avoid ESM wagmi in tests
+    "^@/shared/contexts/Web3Provider$": "<rootDir>/src/shared/components/contexts/Web3Provider.ts",
+    // Ensure relative imports in components resolve to shim as well
+    "^\.\./contexts/Web3Provider$": "<rootDir>/src/shared/components/contexts/Web3Provider.ts",
     // Handle CSS imports (with CSS modules)
     "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
     // Handle CSS imports (without CSS modules)
@@ -28,7 +32,8 @@ const config = {
   moduleDirectories: ["node_modules", "<rootDir>/"],
   testPathIgnorePatterns: ["/node_modules/", "/.next/"],
   transformIgnorePatterns: [
-    "/node_modules/",
+    // Transform ESM packages that ship untranspiled code
+    "/node_modules/(?!(wagmi|viem|@wagmi|@tanstack)/)",
     "^.+\\.module\\.(css|sass|scss)$",
   ],
   transform: {

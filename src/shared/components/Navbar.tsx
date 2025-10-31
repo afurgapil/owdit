@@ -1,8 +1,8 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { Menu, X, Wallet, LogOut } from "lucide-react";
-import { useState } from "react";
 import logo from "../../../public/logo-withoutbg.png";
 import Image from "next/image";
 import { NetworkSelector } from "./NetworkSelector";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useRef, useState } from "react";
 import { AlertTriangle, CheckCircle, X, Upload, Download } from "lucide-react";
 
 interface ImportInfo {
@@ -29,6 +29,7 @@ export default function ImportResolver({
   onIgnoreImport 
 }: ImportResolverProps) {
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const fileInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   if (!resolvedImports) {
     return null;
@@ -82,6 +83,7 @@ export default function ImportResolver({
 
   return (
     <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-white">Import Resolution</h2>
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 p-4 bg-black/20 rounded-lg">
         <div className="text-center">
@@ -92,10 +94,12 @@ export default function ImportResolver({
           <div className="text-2xl font-bold text-yellow-400">{missing.length}</div>
           <div className="text-xs text-gray-400">Missing</div>
         </div>
+        {autoFetched.length > 0 && (
         <div className="text-center">
           <div className="text-2xl font-bold text-blue-400">{autoFetched.length}</div>
-          <div className="text-xs text-gray-400">Auto-fetched</div>
+            <div className="text-xs text-gray-400">Auto fetched</div>
         </div>
+        )}
       </div>
 
       {/* Resolved Imports */}
@@ -111,7 +115,7 @@ export default function ImportResolver({
                 key={index}
                 className="flex items-center space-x-3 p-3 bg-green-900/20 border border-green-500/30 rounded-lg"
               >
-                <div className="text-xl">{getImportTypeIcon(importInfo.type)}</div>
+                <div className="text-xl">⬇️</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium text-white truncate">
@@ -195,22 +199,23 @@ export default function ImportResolver({
                 </div>
                 <div className="flex items-center space-x-2">
                   {importInfo.type === 'relative' && (
-                    <label className="cursor-pointer">
+                    <>
                       <input
+                        ref={(el) => (fileInputsRef.current[importInfo.path] = el)}
                         type="file"
                         accept=".sol,.vy,.rs,.py,.ts,.js"
                         onChange={(e) => handleFileUpload(importInfo.path, e)}
                         className="hidden"
                         disabled={uploadingFiles.has(importInfo.path)}
                       />
-                      <div className="p-1 text-gray-400 hover:text-neon-cyan transition-colors duration-200">
-                        {uploadingFiles.has(importInfo.path) ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-cyan"></div>
-                        ) : (
-                          <Upload className="h-4 w-4" />
-                        )}
-                      </div>
-                    </label>
+                      <button
+                        onClick={() => fileInputsRef.current[importInfo.path]?.click()}
+                        className="px-2 py-1 text-sm border border-neon-cyan/50 text-neon-cyan rounded hover:bg-neon-cyan/10"
+                        disabled={uploadingFiles.has(importInfo.path)}
+                      >
+                        {uploadingFiles.has(importInfo.path) ? "Uploading..." : "Upload"}
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => handleIgnoreImport(importInfo.path)}
@@ -218,6 +223,7 @@ export default function ImportResolver({
                     title="Ignore this import"
                   >
                     <X className="h-4 w-4" />
+                    <span className="sr-only">Ignore</span>
                   </button>
                 </div>
               </div>
@@ -231,10 +237,10 @@ export default function ImportResolver({
         <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
           <h4 className="text-sm font-semibold text-blue-400 mb-2">How to resolve missing imports:</h4>
           <ul className="text-xs text-blue-200 space-y-1">
-            <li>• <strong>Relative imports:</strong> Upload the missing file using the upload button</li>
-            <li>• <strong>NPM packages:</strong> These should be auto-fetched. If not, the package may not be available</li>
-            <li>• <strong>GitHub imports:</strong> Currently not supported. Consider downloading and uploading the file</li>
-            <li>• <strong>Unknown imports:</strong> Upload the file or ignore if not needed for analysis</li>
+            <li>• <strong>Relative imports:</strong> Use the button to add the missing file</li>
+            <li>• <strong>NPM packages:</strong> These should be fetched automatically. If not, the package may not be available</li>
+            <li>• <strong>GitHub imports:</strong> Currently not supported. Consider downloading and providing the file</li>
+            <li>• <strong>Unknown imports:</strong> Add the file or skip if not needed for analysis</li>
           </ul>
         </div>
       )}

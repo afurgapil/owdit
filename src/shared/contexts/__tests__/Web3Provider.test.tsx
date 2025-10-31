@@ -6,7 +6,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 
 // Mock wagmi
 jest.mock("wagmi", () => ({
-  ...jest.requireActual("wagmi"),
   WagmiConfig: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="wagmi-config">{children}</div>
   ),

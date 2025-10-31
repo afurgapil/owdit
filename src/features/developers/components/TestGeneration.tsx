@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { saveAs } from "file-saver";
@@ -86,9 +86,30 @@ export default function TestGeneration({
     );
   };
 
+  const normalizeResult = (raw: any) => {
+    const coverage = raw.coverage || { functionsCount: 0, testCasesCount: 0 };
+    const tests = raw.tests || {};
+    const hardhat = tests.hardhat
+      ? (tests.hardhat.testFile || tests.hardhat.code)
+        ? { testFile: tests.hardhat.testFile ?? tests.hardhat.code, setupFile: tests.hardhat.setupFile ?? "" }
+        : undefined
+      : undefined;
+    const foundry = tests.foundry
+      ? (tests.foundry.testFile || tests.foundry.code)
+        ? { testFile: tests.foundry.testFile ?? tests.foundry.code }
+        : undefined
+      : undefined;
+    return { success: !!raw.success, tests: { hardhat, foundry }, coverage };
+  };
+
   const handleGenerate = async () => {
     if (!contractCode.trim()) {
       setError("Please provide contract code to generate tests");
+      return;
+    }
+
+    if (!contractName.trim()) {
+      setError("Please provide contract name");
       return;
     }
 
@@ -103,7 +124,11 @@ export default function TestGeneration({
 
     try {
       const testResult = await onGenerate(contractCode, contractName, selectedFrameworks);
-      setResult(testResult);
+      if (!testResult?.success) {
+        setError(testResult?.error || "Generation failed");
+        return;
+      }
+      setResult(normalizeResult(testResult));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate tests");
     } finally {
@@ -134,6 +159,7 @@ export default function TestGeneration({
 
   return (
     <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-white">Test Generation</h2>
       {/* Contract Input */}
       <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -155,7 +181,7 @@ export default function TestGeneration({
               type="text"
               value={contractName}
               onChange={(e) => setContractName(e.target.value)}
-              placeholder="e.g., MyContract (will auto-detect from code)"
+              placeholder="Contract name"
               className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neon-cyan focus:border-transparent"
             />
           </div>
@@ -167,7 +193,7 @@ export default function TestGeneration({
             <textarea
               value={contractCode}
               onChange={(e) => handleCodeChange(e.target.value)}
-              placeholder="Paste your Solidity contract code here..."
+              placeholder="Paste your contract code"
               rows={12}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neon-cyan focus:border-transparent font-mono text-sm"
             />

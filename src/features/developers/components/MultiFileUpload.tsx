@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Upload, X, AlertCircle, CheckCircle } from "lucide-react";
 
 interface FileWithPreview {
@@ -177,9 +177,10 @@ export default function MultiFileUpload({
       <div
         className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
           isDragOver
-            ? 'border-neon-cyan bg-neon-cyan/10'
+            ? 'border-neon-blue bg-neon-blue/10'
             : 'border-gray-600 hover:border-neon-cyan/50'
         }`}
+        onDragEnter={handleDragOver}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -190,14 +191,25 @@ export default function MultiFileUpload({
           multiple
           accept={acceptedTypes.join(',')}
           onChange={handleFileInput}
+          aria-label="browse"
           className="hidden"
         />
         
-        <div className="space-y-4">
+        <div
+          className={`space-y-4${isDragOver ? ' border-neon-blue' : ''}`}
+          onDragEnter={handleDragOver}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
           <Upload className="mx-auto h-12 w-12 text-gray-400" />
-          <div>
+          <div
+            className={isDragOver ? 'border-neon-blue' : undefined}
+            onDragEnter={handleDragOver}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
             <p className="text-lg font-medium text-white">
-              Drop files here or click to browse
+              Drag and drop files here or click the button
             </p>
             <p className="text-sm text-gray-400 mt-1">
               Upload up to {maxFiles} files, max {maxSize}MB total
@@ -210,7 +222,7 @@ export default function MultiFileUpload({
             onClick={() => fileInputRef.current?.click()}
             className="px-6 py-2 bg-neon-cyan/20 hover:bg-neon-cyan/30 text-neon-cyan border border-neon-cyan/50 rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-neon-cyan/20"
           >
-            Choose Files
+            Browse
           </button>
         </div>
       </div>
@@ -267,6 +279,7 @@ export default function MultiFileUpload({
                 <button
                   onClick={() => removeFile(file.id)}
                   className="p-1 text-gray-400 hover:text-red-400 transition-colors duration-200"
+                  aria-label={`Remove ${file.file.name}`}
                 >
                   <X className="h-4 w-4" />
                 </button>

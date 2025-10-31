@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { GET } from "../route";
 
 // Mock fetch
@@ -12,7 +11,7 @@ describe("GET /api/contract-analysis/score", () => {
   });
 
   it("returns error when address is missing", async () => {
-    const request = new NextRequest("http://localhost:3000/api/contract-analysis/score");
+    const request = { url: "http://localhost:3000/api/contract-analysis/score" } as any;
 
     const response = await GET(request);
     const data = await response.json();
@@ -34,9 +33,9 @@ describe("GET /api/contract-analysis/score", () => {
       json: async () => mockAnalysisResponse,
     } as Response);
 
-    const request = new NextRequest(
-      "http://localhost:3000/api/contract-analysis/score?address=0x1234&chainId=1"
-    );
+    const request = {
+      url: "http://localhost:3000/api/contract-analysis/score?address=0x1234&chainId=1",
+    } as any;
 
     const response = await GET(request);
     const data = await response.json();
@@ -59,9 +58,9 @@ describe("GET /api/contract-analysis/score", () => {
       json: async () => ({ success: true, score: 85 }),
     } as Response);
 
-    const request = new NextRequest(
-      "http://localhost:3000/api/contract-analysis/score?address=0x1234"
-    );
+    const request = {
+      url: "http://localhost:3000/api/contract-analysis/score?address=0x1234",
+    } as any;
 
     await GET(request);
 
@@ -80,9 +79,9 @@ describe("GET /api/contract-analysis/score", () => {
       json: async () => ({ success: false, error: "Analysis failed" }),
     } as Response);
 
-    const request = new NextRequest(
-      "http://localhost:3000/api/contract-analysis/score?address=0x1234"
-    );
+    const request = {
+      url: "http://localhost:3000/api/contract-analysis/score?address=0x1234",
+    } as any;
 
     const response = await GET(request);
     const data = await response.json();
@@ -95,9 +94,7 @@ describe("GET /api/contract-analysis/score", () => {
     const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    const request = new NextRequest(
-      "http://localhost:3000/api/contract-analysis/score?address=0x1234"
-    );
+    const request = { url: "http://localhost:3000/api/contract-analysis/score?address=0x1234" } as any;
 
     const response = await GET(request);
     const data = await response.json();

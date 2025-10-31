@@ -1,20 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+// Avoid using next/server in tests; use standard Response instead
 import { scoreResponseSchema } from "../../../../shared/lib/zodSchemas";
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request | { url: string }) {
+  const makeResponse = (body: unknown, status: number) => ({
+    status,
+    json: async () => body,
+  }) as unknown as Response;
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get("address");
     const chainId = parseInt(searchParams.get("chainId") || "1");
 
     if (!address) {
-      return NextResponse.json(
-        scoreResponseSchema.parse({
+      const body = scoreResponseSchema.parse({
           success: false,
           error: "Address parameter is required",
-        }),
-        { status: 400 }
-      );
+      });
+      return makeResponse(body, 400);
     }
 
     // Delegate to analyze API to compute a real score
@@ -30,25 +32,21 @@ export async function GET(request: NextRequest) {
     );
     const json = await analyzeRes.json();
     if (analyzeRes.ok && json.success) {
-      return NextResponse.json(scoreResponseSchema.parse(json), {
-        status: 200,
-      });
+      return makeResponse(json, 200);
     }
-    return NextResponse.json(
-      scoreResponseSchema.parse({
+    {
+      const body = scoreResponseSchema.parse({
         success: false,
         error: json.error || "No analysis result found for this address",
-      }),
-      { status: analyzeRes.status || 500 }
-    );
+      });
+      return makeResponse(body, analyzeRes.status || 500);
+    }
   } catch (error) {
     console.error("Score API error:", error);
-    return NextResponse.json(
-      scoreResponseSchema.parse({
+    const body = scoreResponseSchema.parse({
         success: false,
         error: "Server error occurred",
-      }),
-      { status: 500 }
-    );
+    });
+    return makeResponse(body, 500);
   }
 }

@@ -15,8 +15,24 @@ jest.mock("@wagmi/core", () => ({
 }));
 
 jest.mock("next/link", () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  return ({
+    children,
+    href,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    href: string;
+    onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  }) => (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        onClick?.(e);
+      }}
+    >
+      {children}
+    </a>
   );
 });
 
@@ -25,13 +41,12 @@ jest.mock("next/image", () => ({
   default: ({
     src,
     alt,
-    ...props
   }: {
     src: { src: string } | string;
     alt: string;
   }) => {
     const srcValue = typeof src === "object" ? src.src : src;
-    return <img src={srcValue} alt={alt} {...props} />;
+    return <img src={srcValue} alt={alt} />;
   },
 }));
 
@@ -81,7 +96,7 @@ describe("Navbar", () => {
     it("renders navbar with logo and navigation links", () => {
       render(<Navbar />);
 
-      expect(screen.getByAlt("Owdit logo")).toBeInTheDocument();
+      expect(screen.getByAltText("Owdit logo")).toBeInTheDocument();
       expect(screen.getByText("Owdit")).toBeInTheDocument();
       expect(screen.getAllByText("ANALYZE")[0]).toBeInTheDocument();
       expect(screen.getAllByText("DEVELOPERS")[0]).toBeInTheDocument();
@@ -234,7 +249,7 @@ describe("Navbar", () => {
 
       await waitFor(() => {
         const linksAfterClick = screen.getAllByText("ANALYZE");
-        expect(linksAfterClick.length).toBeLessThan(mobileLinks.length);
+        expect(linksAfterClick.length).toBe(1);
       });
     });
   });
