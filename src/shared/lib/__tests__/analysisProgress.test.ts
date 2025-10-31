@@ -27,12 +27,10 @@ describe("AnalysisProgressTracker", () => {
     });
 
     it("should have correct milestone count for verified contracts", () => {
-      const tracker = new AnalysisProgressTracker(true);
       expect(VERIFIED_CONTRACT_MILESTONES).toHaveLength(6);
     });
 
     it("should have correct milestone count for unverified contracts", () => {
-      const tracker = new AnalysisProgressTracker(false);
       expect(UNVERIFIED_CONTRACT_MILESTONES).toHaveLength(7);
     });
   });

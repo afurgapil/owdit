@@ -1,8 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { Web3Provider, config } from "../Web3Provider";
-import { WagmiConfig } from "wagmi";
-import { QueryClientProvider } from "@tanstack/react-query";
 
 // Mock wagmi
 jest.mock("wagmi", () => ({
@@ -120,7 +118,7 @@ describe("Web3Provider", () => {
     });
 
     it("preserves children order", () => {
-      const { container } = render(
+      render(
         <Web3Provider>
           <div data-testid="first">First</div>
           <div data-testid="second">Second</div>
@@ -138,7 +136,7 @@ describe("Web3Provider", () => {
 
   describe("Edge Cases", () => {
     it("handles empty children", () => {
-      const { container } = render(<Web3Provider>{null}</Web3Provider>);
+      render(<Web3Provider>{null}</Web3Provider>);
 
       // Should still render providers
       expect(screen.getByTestId("wagmi-config")).toBeInTheDocument();

@@ -115,7 +115,7 @@ describe("ScoreCard", () => {
 
     it("applies correct color for high score (80+)", () => {
       const highScoreResult = { ...mockCompletedResult, score: 85 };
-      const { container } = render(<ScoreCard result={highScoreResult} />);
+      render(<ScoreCard result={highScoreResult} />);
 
       const scoreElement = screen.getByText("85");
       expect(scoreElement).toHaveClass("text-neon-green");
@@ -123,7 +123,7 @@ describe("ScoreCard", () => {
 
     it("applies correct color for medium score (60-79)", () => {
       const mediumScoreResult = { ...mockCompletedResult, score: 70 };
-      const { container } = render(<ScoreCard result={mediumScoreResult} />);
+      render(<ScoreCard result={mediumScoreResult} />);
 
       const scoreElement = screen.getByText("70");
       expect(scoreElement).toHaveClass("text-neon-orange");
@@ -131,7 +131,7 @@ describe("ScoreCard", () => {
 
     it("applies correct color for medium-low score (40-59)", () => {
       const medLowScoreResult = { ...mockCompletedResult, score: 50 };
-      const { container } = render(<ScoreCard result={medLowScoreResult} />);
+      render(<ScoreCard result={medLowScoreResult} />);
 
       const scoreElement = screen.getByText("50");
       expect(scoreElement).toHaveClass("text-neon-pink");
@@ -139,7 +139,7 @@ describe("ScoreCard", () => {
 
     it("applies correct color for low score (<40)", () => {
       const lowScoreResult = { ...mockCompletedResult, score: 30 };
-      const { container } = render(<ScoreCard result={lowScoreResult} />);
+      render(<ScoreCard result={lowScoreResult} />);
 
       const scoreElement = screen.getByText("30");
       expect(scoreElement).toHaveClass("text-neon-red");
@@ -296,7 +296,7 @@ describe("ScoreCard", () => {
 
   describe("Accessibility", () => {
     it("uses semantic HTML structure", () => {
-      const { container } = render(<ScoreCard result={mockCompletedResult} />);
+      render(<ScoreCard result={mockCompletedResult} />);
 
       const heading = screen.getByText("Security Score");
       expect(heading.tagName).toBe("H3");

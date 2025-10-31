@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { AlertTriangle, CheckCircle, X, Upload, Download } from "lucide-react";
+import { AlertTriangle, CheckCircle, X, Download } from "lucide-react";
 
 interface ImportInfo {
   path: string;

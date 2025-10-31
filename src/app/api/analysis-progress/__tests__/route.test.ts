@@ -124,7 +124,6 @@ const buildBody = (body: any) => ({ json: async () => body }) as any;
 const loadRoute = async () => {
   let mod: any;
   jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('../route');
   });
   return mod;
@@ -132,7 +131,6 @@ const loadRoute = async () => {
 
 // Override NextResponse.json at runtime (after module load) to a minimal shim
 const overrideNextResponse = () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ns = require('next/server');
   if (!ns.NextResponse) return;
   ns.NextResponse.json = (body: any, init?: { status?: number }) => ({

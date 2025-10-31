@@ -375,7 +375,7 @@ describe("AnalysisProgress", () => {
         json: async () => completeProgressData,
       } as Response);
 
-      const { container } = render(
+      render(
         <AnalysisProgress
           sessionId={mockSessionId}
           contractAddress={mockContractAddress}
@@ -433,7 +433,7 @@ describe("AnalysisProgress", () => {
         json: async () => failedProgressData,
       } as Response);
 
-      const { container } = render(
+      render(
         <AnalysisProgress
           sessionId={mockSessionId}
           contractAddress={mockContractAddress}

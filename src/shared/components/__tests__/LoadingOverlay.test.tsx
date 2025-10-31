@@ -111,7 +111,7 @@ describe("LoadingOverlay", () => {
         return firstTile?.textContent;
       };
 
-      const initialText = getFirstTileText();
+      getFirstTileText();
 
       // Advance timers to trigger tile updates
       jest.advanceTimersByTime(500); // Advance past the interval time

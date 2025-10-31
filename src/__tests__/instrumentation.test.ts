@@ -2,7 +2,6 @@
  * Tests for src/instrumentation.ts
  */
 
-import type { Jest } from '@jest/environment';
 
 // We will mutate env vars; keep originals to restore between tests
 const ORIGINAL_ENV = { ...process.env };

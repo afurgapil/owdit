@@ -4,7 +4,6 @@ import {
   transformToUnifiedFormat,
   isVerifiedContract,
   isUnverifiedContract,
-  type UnifiedContractAnalysis,
 } from '../contractAnalysis';
 
 describe('types/contractAnalysis transforms and guards', () => {

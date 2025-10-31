@@ -14,10 +14,57 @@ export function MatrixRain({
   maxDurationSec = 25,
 }: MatrixRainProps) {
   const [isClient, setIsClient] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Defer heavy animation on mobile; mount after first interaction/idle
+  useEffect(() => {
+    if (!isClient) return;
+
+    const isMobile = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+    const idle = (cb: () => void) => {
+      if (
+        typeof window !== "undefined" &&
+        "requestIdleCallback" in window &&
+        typeof window.requestIdleCallback === "function"
+      ) {
+        return window.requestIdleCallback(cb);
+      }
+      return setTimeout(cb, 0);
+    };
+
+    if (!isMobile) {
+      // Desktop: enable after idle
+      idle(() => setShouldRender(true));
+      return;
+    }
+
+    // Mobile: wait for first input or visibility then idle
+    const enable = () => idle(() => setShouldRender(true));
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        enable();
+        document.removeEventListener("visibilitychange", onVisible);
+      }
+    };
+    if (document.visibilityState !== "visible") {
+      document.addEventListener("visibilitychange", onVisible, { once: true });
+    } else {
+      window.addEventListener("pointerdown", enable, { once: true });
+      window.addEventListener("keydown", enable, { once: true });
+      // Fallback: enable after a short delay if no interaction
+      setTimeout(enable, 2000);
+    }
+
+    return () => {
+      window.removeEventListener("pointerdown", enable);
+      window.removeEventListener("keydown", enable);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [isClient]);
 
   const columns = useMemo(() => {
     if (!isClient) return [];
@@ -70,7 +117,7 @@ export function MatrixRain({
     return cols;
   }, [gridSize, minDurationSec, maxDurationSec, isClient]);
 
-  if (!isClient) {
+  if (!isClient || !shouldRender) {
     return null;
   }
 

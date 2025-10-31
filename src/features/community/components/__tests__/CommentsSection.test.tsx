@@ -102,14 +102,19 @@ describe("CommentsSection", () => {
     // Wait list empty state cleared
     await waitFor(() => expect(screen.queryByText(/Loading comments/)).not.toBeInTheDocument());
     // Default sort "new" should put A before B (A newer)
-    const firstNew = screen.getAllByText(/A|B/)[0];
-    expect(firstNew.textContent).toBe("A");
+    // Use exact text matching to find comment messages (not dates containing "AM")
+    const commentA = screen.getByText("A");
+    const commentB = screen.getByText("B");
+    // Check that A comes before B in the DOM (newest first)
+    expect(commentA.compareDocumentPosition(commentB) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Switch to top
     fireEvent.click(screen.getByText("Top"));
     // force reload by triggering load again via effect (sort change calls load)
     await waitFor(() => {
-      const firstTop = screen.getAllByText(/A|B/)[0];
-      expect(firstTop.textContent).toBe("B");
+      // After sorting by top, B (score 5) should come before A (score 1)
+      const commentATop = screen.getByText("A");
+      const commentBTop = screen.getByText("B");
+      expect(commentBTop.compareDocumentPosition(commentATop) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
     restore();
   });

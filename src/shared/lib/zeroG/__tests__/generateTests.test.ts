@@ -31,7 +31,6 @@ jest.mock("ethers", () => ({
     },
     Wallet: class {
       address = "0xabc";
-      constructor(privateKey: string, provider: any) {}
     },
   },
 }));
@@ -695,14 +694,8 @@ For Foundry: Use Forge, vm cheatcodes`;
 
   describe("Error Handling", () => {
     it("should return default values on parse error", () => {
-      const data = "invalid json";
 
-      let testData;
-      try {
-        testData = JSON.parse(data);
-      } catch {
-        testData = null;
-      }
+    
 
       const result: Omit<TestGenerationResponse, "success"> = {
         tests: {},
@@ -714,7 +707,6 @@ For Foundry: Use Forge, vm cheatcodes`;
     });
 
     it("should handle null response data", () => {
-      const data = null;
 
       const result: Omit<TestGenerationResponse, "success"> = {
         tests: {},

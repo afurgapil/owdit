@@ -36,19 +36,8 @@ jest.mock("next/link", () => {
   );
 });
 
-jest.mock("next/image", () => ({
-  __esModule: true,
-  default: ({
-    src,
-    alt,
-  }: {
-    src: { src: string } | string;
-    alt: string;
-  }) => {
-    const srcValue = typeof src === "object" ? src.src : src;
-    return <img src={srcValue} alt={alt} />;
-  },
-}));
+// Use automatic mock from __mocks__/next/image.tsx
+jest.mock("next/image");
 
 jest.mock("../NetworkSelector", () => ({
   NetworkSelector: () => (
@@ -196,7 +185,7 @@ describe("Navbar", () => {
     it("mobile menu is hidden by default", () => {
       render(<Navbar />);
 
-      const mobileLinks = screen.queryByText((content, element) => {
+      screen.queryByText((content, element) => {
         return (
           element?.tagName === "A" &&
           content === "ANALYZE" &&

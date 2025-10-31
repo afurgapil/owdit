@@ -128,7 +128,7 @@ describe("ExplanationAccordion", () => {
     });
 
     it("changes icon when expanded", () => {
-      const { container } = render(
+      render(
         <ExplanationAccordion items={mockFindings} />
       );
 

@@ -26,7 +26,6 @@ const buildNonceBody = (body: any) => ({ json: async () => body }) as any;
 const loadNonceRoute = async () => {
   let mod: any;
   jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('../route');
   });
   return mod;

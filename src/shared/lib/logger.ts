@@ -42,7 +42,8 @@ export const logger = {
   error(message: string, meta?: LogMeta & { error?: unknown }) {
     const err = meta?.error;
     // Remove error from metadata to avoid duplication
-    const { error: _, ...rest } = meta || {};
+    const rest = meta ? { ...meta } : {};
+    delete rest.error;
     const enriched = {
       ...rest,
       ...(err !== undefined && {

@@ -2,21 +2,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { Footer } from "../Footer";
 
-// Mock Next.js Image component
-jest.mock("next/image", () => ({
-  __esModule: true,
-  default: ({
-    src,
-    alt,
-    ...props
-  }: {
-    src: { src: string } | string;
-    alt: string;
-  }) => {
-    const srcValue = typeof src === "object" ? src.src : src;
-    return <img src={srcValue} alt={alt} {...props} />;
-  },
-}));
+// Use automatic mock from __mocks__/next/image.tsx
+jest.mock("next/image");
 
 describe("Footer", () => {
   describe("Rendering", () => {

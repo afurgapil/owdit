@@ -154,7 +154,7 @@ describe("WalletSelector", () => {
         isPending: false,
       });
 
-      const { container, rerender } = render(
+      const { rerender } = render(
         <WalletSelector isOpen={true} onClose={mockOnClose} />
       );
 

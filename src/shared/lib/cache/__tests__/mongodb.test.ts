@@ -530,10 +530,7 @@ describe("MongoDB Cache Service - Logic Tests", () => {
     });
 
     it("should fallback to default score when undefined", () => {
-      const analysis = {
-        aiOutput: { score: undefined },
-        overallRiskScore: undefined,
-      };
+   
 
       const safety = 50; // Default fallback
       expect(typeof safety).toBe("number");

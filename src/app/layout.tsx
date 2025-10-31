@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Open_Sans, Raleway } from "next/font/google";
 import "./globals.css";
 import { Layout } from "../shared/components/Layout";
-import Script from "next/script";
 import DeferredGA from "../shared/components/DeferredGA";
 import LoadNonCriticalCss from "../shared/components/LoadNonCriticalCss";
 import ClientRoot from "./ClientRoot";

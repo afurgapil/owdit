@@ -194,7 +194,7 @@ describe("NetworkSelector", () => {
     });
 
     it("closes dropdown when clicking outside", async () => {
-      const { container } = render(
+      render(
         <div>
           <NetworkSelector />
           <div data-testid="outside">Outside Element</div>
@@ -282,7 +282,7 @@ describe("NetworkSelector", () => {
     });
 
     it("button has correct cursor styles", () => {
-      const { container } = render(<NetworkSelector />);
+      render(<NetworkSelector />);
 
       const button = screen.getByRole("button");
       expect(button).toHaveClass("cursor-pointer");

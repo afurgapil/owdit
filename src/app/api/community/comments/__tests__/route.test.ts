@@ -45,7 +45,6 @@ const buildPOST = (body: any, headers?: Record<string, string>) => ({
 const loadRoute = async () => {
   let mod: any;
   jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('../route');
   });
   return mod;

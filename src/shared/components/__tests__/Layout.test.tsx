@@ -89,7 +89,7 @@ describe("Layout", () => {
     });
 
     it("maintains correct provider nesting order", () => {
-      const { container } = render(
+      render(
         <Layout>
           <div>Content</div>
         </Layout>
@@ -208,7 +208,7 @@ describe("Layout", () => {
     });
 
     it("preserves children order", () => {
-      const { container } = render(
+      render(
         <Layout>
           <div data-testid="first">First</div>
           <div data-testid="second">Second</div>

@@ -31,7 +31,6 @@ jest.mock("ethers", () => ({
     },
     Wallet: class {
       address = "0xabc";
-      constructor(privateKey: string, provider: any) {}
     },
   },
 }));

@@ -34,7 +34,11 @@ describe("Logger", () => {
     mockError.mockRestore();
 
     // Restore NODE_ENV
-    process.env.NODE_ENV = originalEnv;
+    Object.defineProperty(process.env, "NODE_ENV", {
+      value: originalEnv,
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterAll(() => {
@@ -47,19 +51,31 @@ describe("Logger", () => {
 
   describe("logger.debug", () => {
     it("should call console.debug in non-production", () => {
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+        configurable: true,
+      });
       logger.debug("test message");
       expect(mockDebug).toHaveBeenCalledTimes(1);
     });
 
     it("should NOT call console.debug in production", () => {
-      process.env.NODE_ENV = "production";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "production",
+        writable: true,
+        configurable: true,
+      });
       logger.debug("test message");
       expect(mockDebug).not.toHaveBeenCalled();
     });
 
     it("should format message with timestamp", () => {
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+        configurable: true,
+      });
       logger.debug("test message");
       expect(mockDebug).toHaveBeenCalled();
       const call = mockDebug.mock.calls[0][0];
@@ -69,7 +85,11 @@ describe("Logger", () => {
     });
 
     it("should include metadata in message", () => {
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+        configurable: true,
+      });
       logger.debug("test", { key: "value" });
       const call = mockDebug.mock.calls[0][0];
       expect(call).toContain("key=value");
@@ -216,7 +236,11 @@ describe("Logger", () => {
     });
 
     it("should work with debug in development", () => {
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+        configurable: true,
+      });
       const contextLogger = logger.with("Debug");
       contextLogger.debug("test");
       expect(mockDebug).toHaveBeenCalled();
