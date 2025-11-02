@@ -5,6 +5,12 @@
   
   <h3>AI-Powered Smart Contract Security with Persistent MongoDB Caching</h3>
   
+  <p>
+    <a href="https://owdit.com">Live Demo</a>
+    ·
+    <a href="https://youtu.be/WAD32SdsgY0">Demo Video</a>
+  </p>
+
   <a href="https://nextjs.org/">
     <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js" alt="Next.js" />
   </a>
@@ -24,24 +30,25 @@
 
 ## 🚀 Overview
 
-Owdit is a smart contract security analysis platform that combines bytecode/source analysis, optional AI inference, and a persistent MongoDB cache to protect your funds. It automatically scans contracts and serves comprehensive, repeatable reports without re-querying the chain.
+Owdit is a smart contract security analysis platform that combines bytecode/source analysis, optional AI inference (via 0G Serving Broker), and a persistent MongoDB cache to protect your funds. It automatically scans contracts and serves comprehensive, repeatable reports without re-querying the chain.
 
 ### Key Features
 
-- 🤖 **AI-Powered Analysis**: Optional 0G inference + heuristic/static checks
-- ⚡ **Instant Results**: Fast results, cached to avoid repeat network calls
-- 💾 **Persistent Cache**: MongoDB-backed caching with TTL and indexes
-- 🔍 **Dual Analysis**: Works for verified and unverified contracts
-- 🛡️ **Upgradeable Detection**: Upgradeable contracts are detected and not cached
-- 📊 **History & Search**: Real-time history endpoint with pagination and search
-- 🎨 **Modern UI**: Cyberpunk-themed, responsive interface
+- **AI-Powered Analysis**: Optional 0G inference via 0G Serving Broker + heuristic/static checks
+- **Instant Results**: Fast results, cached to avoid repeat network calls
+- **Persistent Cache**: MongoDB-backed caching with TTL and indexes
+- **Dual Analysis**: Works for verified and unverified contracts
+- **Upgradeable Detection**: Upgradeable contracts are detected and not cached
+- **History & Search**: Real-time history endpoint with pagination and search
+- **Modern UI**: Cyberpunk-themed, responsive interface
+- **Pay-with-Web3 for AI**: Pay‑as‑you‑go LLM inference using assets you already hold on‑chain (via 0G)
 
 ## 🧠 How It Works
 
 - Frontend pages submit contract addresses or raw Solidity code to the `contract-analysis` API namespace.
 - The API checks MongoDB first; cache hits return immediately and power the history/stats views.
 - Cache misses trigger source resolution via Sourcify/Etherscan or bytecode heuristics with proxy detection when the source is unavailable.
-- 0G inference produces AI scoring with safeguards: verified contracts fall back to rule-based scoring, unverified bytecode uses opcode heuristics.
+- 0G inference (through 0G Serving Broker) produces AI scoring with safeguards: verified contracts fall back to rule-based scoring, unverified bytecode uses opcode heuristics.
 - Non-upgradeable results persist in MongoDB, while upgradeable findings skip caching to avoid stale data.
 
 ```mermaid
@@ -77,102 +84,21 @@ sequenceDiagram
 
 ## 🏗️ Architecture
 
-### Frontend
+High‑level: Next.js App (App Router) + serverless API routes, MongoDB Atlas cache (unique + TTL indexes), and optional AI inference via 0G Serving Broker. For full component map, flows, and design choices, see `docs/ARCHITECTURE.md`.
 
-- **Next.js 15** with App Router
-- **TypeScript**, **Tailwind CSS**, **Lucide React**
-- **Context API** for network selection
+## 🌐 Deployment & Production Readiness
 
-### Backend
+- **Live**: https://owdit.com
+- **0G Integration**: Uses 0G Serving Broker for LLM inference and pay‑as‑you‑go usage with on‑chain assets. No on‑chain contracts are required for this flow, so 0G mainnet contract list is not applicable.
+- **Storage**: 0G Storage not required by this dapp.
+- **Compute/DA**: 0G Compute/DA can remain on testnet.
+- **Cache**: MongoDB Atlas with unique + TTL indexes; upgradeable contracts are not cached to avoid staleness.
 
-- **Next.js API Routes** for server functions
-- **MongoDB Atlas** for persistent caching (unique + TTL indexes)
-- **Sourcify/Etherscan** for source, RPC for bytecode
-- **0G Compute (optional)** for AI inference
+See `docs/DEPLOYMENT.md` and `docs/OBSERVABILITY.md` for details.
 
-### Key Components
+## ✅ 0G Mainnet Contracts
 
-- **Contract Analysis Engine**: Bytecode and source pipelines
-- **Cache Service**: Singleton MongoDB client, TTL, upgradeable skip
-- **History API**: `/api/history` with pagination and search
-- **Cache Stats API**: `/api/cache/stats` for observability
-
-## 🔌 Core API Routes
-
-| Route | Method | Purpose |
-| --- | --- | --- |
-| `/api/contract-analysis/analyze` | POST | Entry point for address-based analysis, cache lookup, optional AI scoring |
-| `/api/contract-analysis/contract-source` | GET | Retrieves unified contract data (source or bytecode fallback) with caching |
-| `/api/contract-analysis/risk` | GET | Runs bytecode heuristics, proxy detection, and optional AI scoring for unverified contracts |
-| `/api/contract-analysis/analyze-code` | POST | Accepts raw Solidity (or other) code and returns structured security and quality findings |
-| `/api/contract-analysis/infer` | POST | Thin wrapper over 0G inference with deterministic fallbacks |
-| `/api/cache/stats` | GET/DELETE | Reports cache health metrics or purges expired entries |
-
-## 📋 Prerequisites
-
-- **Node.js** 18+
-- **npm** 9+
-- **Git**
-
-## 🚀 Quick Start
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/afurgapil/owdit.git
-cd owdit
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Environment Setup
-
-Create a `.env.local` file in the project root:
-
-```env
-# MongoDB (required)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/owdit?retryWrites=true&w=majority
-
-# Etherscan (optional)
-ETHERSCAN_API_KEY=your_etherscan_api_key
-
-# Base URL (optional; used in some internal calls)
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
-
-# Optional per-chain RPC overrides (e.g., RPC_URL_1, RPC_URL_11155111)
-RPC_URL_{CHAIN_ID}=https://...
-
-# 0G Network (optional; for AI inference)
-PRIVATE_KEY=your_ethereum_private_key
-RPC_0G=https://evmrpc-testnet.0g.ai
-```
-
-### 4. Start Development Server
-
-```bash
-npm run dev
-```
-
-Open http://localhost:3000 in your browser.
-
-## 🔧 Detailed Setup
-
-### MongoDB Atlas
-
-1. Create a free cluster at MongoDB Atlas
-2. Create a database user
-3. Allow your IP (or 0.0.0.0/0 for development)
-4. Copy the connection string to `MONGODB_URI`
-
-### Optional: 0G Inference
-
-1. Fund your wallet on the 0G testnet
-2. Set `PRIVATE_KEY` and `RPC_0G`
-3. Inference is called through the `/api/infer` route
+N/A — broker‑based LLM integration; this dapp does not deploy its own on‑chain contracts on 0G. We integrate with the 0G Serving Broker for inference and payments using users’ existing on‑chain assets.
 
 ## 🎯 Usage
 
@@ -186,10 +112,7 @@ Open http://localhost:3000 in your browser.
    - Caches non-upgradeable results in MongoDB (TTL ~24h)
    - Returns a unified security report
 
-### Demo Contracts (Sepolia)
 
-- Verified: `0x56182792540295095ea6e269C6680E98FEAaC73E`
-- Unverified: `0xCdd6D91F8122aDED891cA2bFBFc16dDaE5ee7d76`
 
 ### View History
 
@@ -210,6 +133,7 @@ Open http://localhost:3000 in your browser.
 - Security score and qualitative reasoning
 - Risk level classification and detection patterns
 - Works with verified and unverified contracts
+ - Broker‑based LLM inference with pay‑as‑you‑go using on‑chain assets (via 0G)
 
 ### Contract Analysis Types
 
@@ -230,6 +154,18 @@ Open http://localhost:3000 in your browser.
 - TTL index for automatic expiration (~24 hours)
 - Upgradeable contracts are detected and not cached
 - History and stats endpoints for observability
+
+## 🧪 Quality, CI/CD & Monitoring
+
+- **CI/CD**: GitHub Actions run a large test suite (>1000 tests) on every push/PR. Coverage is consistently >80%.
+  - Workflow: `.github/workflows/unit-tests.yml`
+  - Commands: `npm run test`, `npm run test:coverage`
+- **Coverage**: Reports available under the `coverage/` directory.
+- **Uptime & Alerts**: UptimeRobot monitors public endpoints for availability; alerts enable rapid incident response.
+- **Error Tracking**: Sentry is integrated (including performance monitoring) to triage issues quickly.
+- **Analytics**: Google Analytics is integrated to measure UX metrics and guide improvements.
+
+See `docs/OBSERVABILITY.md` for setup and operational details.
 
 ## 🛠️ Development
 
@@ -259,6 +195,15 @@ src/
 - Build: `npm run build`
 - Start: `npm start`
 - Lint: `npm run lint`
+
+## 🧩 Documentation
+
+- Architecture: `docs/ARCHITECTURE.md`
+- 0G Integration: `docs/0G-INTEGRATION.md`
+- Deployment: `docs/DEPLOYMENT.md`
+- Observability: `docs/OBSERVABILITY.md`
+- Security: `docs/SECURITY.md`
+- Roadmap: `docs/ROADMAP.md`
 
 ## 📝 License
 
