@@ -15,6 +15,7 @@ import {
   TestTube,
 } from "lucide-react";
 import { MatrixRain } from "../../shared/components/MatrixRain";
+import { ReleaseBadge } from "../../shared/components/ReleaseBadge";
 import MultiFileUpload from "../../features/developers/components/MultiFileUpload";
 import GitHubImport from "../../features/developers/components/GitHubImport";
 import TestGeneration from "../../features/developers/components/TestGeneration";
@@ -311,10 +312,13 @@ export default function ContractAnalyzer() {
           <h1 className="text-4xl font-bold text-white mb-4 font-raleway">
             Smart Contract Developer Tools
           </h1>
-          <p className="text-xl text-gray-300">
-            Analyze your smart contracts for security, gas optimization, and
-            best practices
-          </p>
+          <div className="flex items-center justify-center gap-4">
+            <p className="text-xl text-gray-300">
+              Analyze your smart contracts for security, gas optimization, and
+              best practices
+            </p>
+            <ReleaseBadge />
+          </div>
         </div>
 
         {/* Mode Tabs */}

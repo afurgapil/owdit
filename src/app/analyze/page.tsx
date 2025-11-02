@@ -10,6 +10,7 @@ import { Brain, Database, CheckCircle, Loader2 } from "lucide-react";
 import { CommentsSection } from "../../features/community/components/CommentsSection";
 import { DeployerAnalysisCard } from "../../features/analysisResult/components/DeployerAnalysisCard";
 import { InteractionAnalysisCard } from "../../features/analysisResult/components/InteractionAnalysisCard";
+import { ReleaseBadge } from "../../shared/components/ReleaseBadge";
 import {
   DeployerAnalysis,
   InteractionAnalysis,
@@ -154,9 +155,12 @@ function AnalyzeContent() {
               <Database className="h-6 w-6 mr-3" />
               DEMO CONTRACTS
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-              Try with Example Contracts
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                Try with Example Contracts
+              </h2>
+              <ReleaseBadge />
+            </div>
             <p className="text-base text-gray-300 max-w-2xl mx-auto">
               Select one of our demo contracts to see how the OWL analyzes smart
               contracts

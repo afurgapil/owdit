@@ -36,7 +36,7 @@ export default function HomePage() {
 
       {/* Hero Section - LCP Critical Content */}
       <section className="pt-24 pb-20 px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="max-w-7xl mx-auto text-center">
+        <div className="max-w-7xl mx-auto text-center flex flex-col items-center">
           {/* Main Title - LCP Element */}
           <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black mb-8 leading-tight">
             <span className="text-white block mb-2">SMART CONTRACT</span>
@@ -202,7 +202,7 @@ export default function HomePage() {
         id="how-it-works"
         className="py-24 px-4 sm:px-6 lg:px-8 relative z-10"
       >
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto flex flex-col items-center">
           <div className="text-center mb-20">
             <h2 className="text-5xl font-bold text-white mb-8 neon-text neon-blue">
               HOW THE OWL WORKS
@@ -271,7 +271,7 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="glass-card p-16 rounded-3xl neon-border">
+          <div className="glass-card p-16 rounded-3xl neon-border flex flex-col items-center">
             <h2 className="text-5xl font-bold text-white mb-10 neon-text neon-blue">
               READY TO LET THE OWL WATCH OVER YOUR CONTRACTS?
             </h2>

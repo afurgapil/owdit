@@ -33,7 +33,9 @@ export interface TestGenerationResponse {
   error?: string;
 }
 
-const DEFAULT_0G_RPC = process.env.RPC_0G || "https://evmrpc-testnet.0g.ai";
+const DEFAULT_0G_RPC = process.env.NODE_ENV === 'production'
+? "https://evmrpc.0g.ai"  // Mainnet
+: "https://evmrpc-testnet.0g.ai";  // Testnet
 
 // Official 0G Services from documentation
 const OFFICIAL_PROVIDERS = {
