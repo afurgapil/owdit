@@ -30,17 +30,6 @@ describe("Footer", () => {
   });
 
   describe("Content", () => {
-    it("displays description text", () => {
-      render(<Footer />);
-
-      const description = screen.getByText(
-        /The OWL watches over your smart contracts/i
-      );
-      expect(description).toBeInTheDocument();
-      expect(description).toHaveTextContent("AI-powered security analysis");
-      expect(description).toHaveTextContent("0G Network");
-    });
-
     it("displays copyright notice", () => {
       render(<Footer />);
 
@@ -131,15 +120,21 @@ describe("Footer", () => {
     it("has responsive flex classes", () => {
       const { container } = render(<Footer />);
 
-      const mainContainer = container.querySelector(".flex-col");
-      expect(mainContainer).toHaveClass("md:flex-row");
+      const elements = container.querySelectorAll(".flex-col");
+      const responsiveEl = Array.from(elements).find((el) =>
+        el.className.includes("md:flex-row")
+      );
+      expect(responsiveEl).toBeTruthy();
     });
 
     it("has responsive spacing classes", () => {
       const { container } = render(<Footer />);
 
-      const spacingDiv = container.querySelector(".space-y-8");
-      expect(spacingDiv).toHaveClass("md:space-y-0");
+      const spacingEls = container.querySelectorAll(".space-y-8");
+      const responsiveSpacing = Array.from(spacingEls).find((el) =>
+        el.className.includes("md:space-y-0")
+      );
+      expect(responsiveSpacing).toBeTruthy();
     });
   });
 
@@ -155,11 +150,6 @@ describe("Footer", () => {
 
       // Tagline
       expect(screen.getByText("THE WATCHFUL OWL")).toBeInTheDocument();
-
-      // Description
-      expect(
-        screen.getByText(/AI-powered security analysis/i)
-      ).toBeInTheDocument();
     });
   });
 });

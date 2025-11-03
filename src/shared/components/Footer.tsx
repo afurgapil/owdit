@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="bg-black/80 border-t border-neon-blue/40 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-8 md:space-y-0">
+        <div className="w-full flex flex-col md:flex-row justify-between items-center space-y-8 md:space-y-0">
           {/* Logo and Description */}
           <div className="flex items-center space-x-4">
             <Image src={logo} alt="logo" width={64} height={64} />
@@ -16,14 +16,6 @@ export function Footer() {
                 THE WATCHFUL OWL
               </span>
             </div>
-          </div>
-
-          {/* Description */}
-          <div className="text-center w-full max-w-md">
-            <p className="text-gray-300 leading-relaxed text-center">
-              The OWL watches over your smart contracts with AI-powered security
-              analysis. Secure and transparent on the 0G Network.
-            </p>
           </div>
 
           {/* Social Links */}
@@ -40,7 +32,7 @@ export function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-12 pt-8 border-t border-neon-blue/30 text-center">
+        <div className="w-full mt-12  pt-8 border-t border-neon-blue/30 text-center">
           <p className="text-gray-400 font-mono">
             © 2025 Owdit - The Watchful Owl. All rights reserved.
           </p>

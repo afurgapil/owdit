@@ -154,7 +154,6 @@ export default function RootLayout({
           }
           
           h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 900; }
-          p { margin: 0; }
           a { color: inherit; text-decoration: none; }
           
           .neon-text {
@@ -184,7 +183,6 @@ export default function RootLayout({
             border-radius: 8px;
             padding: 16px 32px;
             cursor: pointer;
-            display: inline-block;
           }
           
           nav {

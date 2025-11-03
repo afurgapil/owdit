@@ -44,21 +44,21 @@ export default function HomePage() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-2xl text-gray-300 mb-16 max-w-5xl mx-auto leading-relaxed">
+          <p className="text-2xl text-gray-300 mb-4 max-w-5xl mx-auto leading-relaxed">
             The <span className="text-owl-gold font-bold">OWL</span> watches
             over your smart contracts. AI-powered security analysis with
             comprehensive security analysis and risk assessment.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-8 justify-center mb-16">
+          <div className="flex flex-col sm:flex-row gap-8 justify-center mb-4">
             <Link
               href="/analyze"
-              className="flex items-center justify-center btn-cyberpunk px-12 py-6 text-xl rounded-xl hover-glow transform hover:scale-105 transition-all duration-300"
+              className="flex flex-row items-center justify-center btn-cyberpunk px-6 py-3 text-xl rounded-xl hover-glow transform hover:scale-105 transition-all duration-300"
             >
-              <span className="flex items-center">
+              <span className="inline-flex items-center text-lg">
                 ANALYZE CONTRACT
-                <ArrowRight className="ml-3 h-6 w-6" />
+                <ArrowRight className="ml-1 h-6 w-6" />
               </span>
             </Link>
             <Link
